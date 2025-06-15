@@ -4,7 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-../main/resources/application-dev.properties
+server/src/main/resources/application-dev.properties
 
 ### STS ###
 .apt_generated
