@@ -1,0 +1,51 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-100">
+  <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-center">Create Account</h2>
+    <form (ngSubmit)="onSubmit()" class="space-y-4">
+      <div>
+        <label class="block mb-1 text-sm font-medium">Name</label>
+        <input
+          type="text"
+          [(ngModel)]="user.name"
+          name="name"
+          required
+          class="w-full p-2 border border-gray-300 rounded"
+        />
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium">Email</label>
+        <input
+          type="email"
+          [(ngModel)]="user.email"
+          name="email"
+          required
+          class="w-full p-2 border border-gray-300 rounded"
+        />
+      </div>
+
+      <div>
+        <label class="block mb-1 text-sm font-medium">Password</label>
+        <input
+          type="password"
+          [(ngModel)]="user.password"
+          name="password"
+          required
+          class="w-full p-2 border border-gray-300 rounded"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
+      >
+        Sign Up
+      </button>
+
+      <p class="text-center text-sm mt-4">
+        Already have an account?
+        <a routerLink="/login" class="text-blue-600 hover:underline">Log In</a>
+      </p>
+    </form>
+  </div>
+</div>
