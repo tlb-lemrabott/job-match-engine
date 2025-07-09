@@ -19,6 +19,23 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+}
+
+export interface SignupResponse {
+  success: boolean;
+  message: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -54,6 +71,31 @@ export class AuthServiceService {
         catchError(error => {
           console.error('Login error:', error);
           return throwError(() => new Error(error.error?.message || 'Login failed. Please try again.'));
+        })
+      );
+  }
+
+  signup(name: string, email: string, password: string, phone: string): Observable<SignupResponse> {
+    const signupData: SignupRequest = { name, email, password, phone };
+    
+    const httpOptions = {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json'
+      })
+    };
+
+    return this.http.post<SignupResponse>(`${this.apiUrl}/auth/signup`, signupData, httpOptions)
+      .pipe(
+        map(response => {
+          // Store user data if signup is successful
+          if (response.success && response.user) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+          }
+          return response;
+        }),
+        catchError(error => {
+          console.error('Signup error:', error);
+          return throwError(() => new Error(error.error?.message || 'Signup failed. Please try again.'));
         })
       );
   }
