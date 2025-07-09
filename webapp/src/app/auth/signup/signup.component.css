@@ -1,0 +1,58 @@
+/* Custom styles for signup component */
+
+.password-strength-bar {
+  transition: all 0.3s ease;
+}
+
+.password-strength-weak {
+  background-color: #ef4444;
+}
+
+.password-strength-fair {
+  background-color: #f97316;
+}
+
+.password-strength-good {
+  background-color: #eab308;
+}
+
+.password-strength-strong {
+  background-color: #22c55e;
+}
+
+/* Custom focus styles */
+.form-input:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Error state animations */
+.error-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Success state */
+.success-border {
+  border-color: #22c55e;
+}
+
+.success-border:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}

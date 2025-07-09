@@ -1,51 +1,279 @@
-<!-- <div class="min-h-screen flex items-center justify-center bg-gray-100">
-  <div class="bg-white p-8 rounded shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center">Create Account</h2>
-    <form (ngSubmit)="onSubmit()" class="space-y-4">
-      <div>
-        <label class="block mb-1 text-sm font-medium">Name</label>
-        <input
-          type="text"
-          [(ngModel)]="user.name"
-          name="name"
-          required
-          class="w-full p-2 border border-gray-300 rounded"
-        />
-      </div>
-
-      <div>
-        <label class="block mb-1 text-sm font-medium">Email</label>
-        <input
-          type="email"
-          [(ngModel)]="user.email"
-          name="email"
-          required
-          class="w-full p-2 border border-gray-300 rounded"
-        />
-      </div>
-
-      <div>
-        <label class="block mb-1 text-sm font-medium">Password</label>
-        <input
-          type="password"
-          [(ngModel)]="user.password"
-          name="password"
-          required
-          class="w-full p-2 border border-gray-300 rounded"
-        />
-      </div>
-
-      <button
-        type="submit"
-        class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"
-      >
-        Sign Up
-      </button>
-
-      <p class="text-center text-sm mt-4">
-        Already have an account?
-        <a routerLink="/login" class="text-blue-600 hover:underline">Log In</a>
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-md w-full space-y-8">
+    <!-- Header -->
+    <div class="text-center">
+      <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
+        Create your account
+      </h2>
+      <p class="mt-2 text-sm text-gray-600">
+        Join us today! Please fill in your details to get started.
       </p>
+    </div>
+
+    <!-- Signup Form -->
+    <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="rounded-md bg-red-50 p-4">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700">{{ errorMessage }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Name Field -->
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700">
+          Full Name
+        </label>
+        <div class="mt-1 relative">
+          <input
+            id="name"
+            name="name"
+            type="text"
+            formControlName="name"
+            [class.border-red-300]="isFieldInvalid('name')"
+            [class.focus:border-red-500]="isFieldInvalid('name')"
+            [class.focus:ring-red-500]="isFieldInvalid('name')"
+            [class.border-gray-300]="!isFieldInvalid('name')"
+            [class.focus:border-indigo-500]="!isFieldInvalid('name')"
+            [class.focus:ring-indigo-500]="!isFieldInvalid('name')"
+            class="appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm"
+            placeholder="Enter your full name"
+            autocomplete="name"
+            required
+          />
+          <div *ngIf="isFieldInvalid('name')" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <p *ngIf="isFieldInvalid('name')" class="mt-2 text-sm text-red-600">
+          {{ getErrorMessage('name') }}
+        </p>
+      </div>
+
+      <!-- Email Field -->
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700">
+          Email address
+        </label>
+        <div class="mt-1 relative">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            formControlName="email"
+            [class.border-red-300]="isFieldInvalid('email')"
+            [class.focus:border-red-500]="isFieldInvalid('email')"
+            [class.focus:ring-red-500]="isFieldInvalid('email')"
+            [class.border-gray-300]="!isFieldInvalid('email')"
+            [class.focus:border-indigo-500]="!isFieldInvalid('email')"
+            [class.focus:ring-indigo-500]="!isFieldInvalid('email')"
+            class="appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm"
+            placeholder="Enter your email"
+            autocomplete="email"
+            required
+          />
+          <div *ngIf="isFieldInvalid('email')" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <p *ngIf="isFieldInvalid('email')" class="mt-2 text-sm text-red-600">
+          {{ getErrorMessage('email') }}
+        </p>
+      </div>
+
+      <!-- Phone Field -->
+      <div>
+        <label for="phone" class="block text-sm font-medium text-gray-700">
+          Phone Number
+        </label>
+        <div class="mt-1 relative">
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            formControlName="phone"
+            [class.border-red-300]="isFieldInvalid('phone')"
+            [class.focus:border-red-500]="isFieldInvalid('phone')"
+            [class.focus:ring-red-500]="isFieldInvalid('phone')"
+            [class.border-gray-300]="!isFieldInvalid('phone')"
+            [class.focus:border-indigo-500]="!isFieldInvalid('phone')"
+            [class.focus:ring-indigo-500]="!isFieldInvalid('phone')"
+            class="appearance-none relative block w-full px-3 py-2 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm"
+            placeholder="Enter your phone number"
+            autocomplete="tel"
+            required
+          />
+          <div *ngIf="isFieldInvalid('phone')" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <p *ngIf="isFieldInvalid('phone')" class="mt-2 text-sm text-red-600">
+          {{ getErrorMessage('phone') }}
+        </p>
+      </div>
+
+      <!-- Password Field -->
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700">
+          Password
+        </label>
+        <div class="mt-1 relative">
+          <input
+            id="password"
+            name="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            [class.border-red-300]="isFieldInvalid('password')"
+            [class.focus:border-red-500]="isFieldInvalid('password')"
+            [class.focus:ring-red-500]="isFieldInvalid('password')"
+            [class.border-gray-300]="!isFieldInvalid('password')"
+            [class.focus:border-indigo-500]="!isFieldInvalid('password')"
+            [class.focus:ring-indigo-500]="!isFieldInvalid('password')"
+            class="appearance-none relative block w-full px-3 py-2 pr-10 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm"
+            placeholder="Create a strong password"
+            autocomplete="new-password"
+            required
+          />
+          <button
+            type="button"
+            (click)="togglePasswordVisibility()"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center"
+          >
+            <svg *ngIf="!showPassword" class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <svg *ngIf="showPassword" class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Password Strength Indicator -->
+        <div *ngIf="signupForm.get('password')?.value" class="mt-2">
+          <div class="flex items-center space-x-2">
+            <div class="flex-1 bg-gray-200 rounded-full h-2">
+              <div 
+                class="h-2 rounded-full transition-all duration-300"
+                [class]="getPasswordStrength().color.replace('text-', 'bg-').replace('-600', '-500')"
+                [style.width.%]="getPasswordStrength().percentage"
+              ></div>
+            </div>
+            <span [class]="getPasswordStrength().color + ' text-xs font-medium'">
+              {{ getPasswordStrength().strength }}
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-gray-500">
+            Password must contain at least 8 characters with uppercase, lowercase, number, and special character.
+          </p>
+        </div>
+        
+        <p *ngIf="isFieldInvalid('password')" class="mt-2 text-sm text-red-600">
+          {{ getErrorMessage('password') }}
+        </p>
+      </div>
+
+      <!-- Confirm Password Field -->
+      <div>
+        <label for="confirmPassword" class="block text-sm font-medium text-gray-700">
+          Confirm Password
+        </label>
+        <div class="mt-1 relative">
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            [class.border-red-300]="isFieldInvalid('confirmPassword') || signupForm.errors?.['passwordMismatch']"
+            [class.focus:border-red-500]="isFieldInvalid('confirmPassword') || signupForm.errors?.['passwordMismatch']"
+            [class.focus:ring-red-500]="isFieldInvalid('confirmPassword') || signupForm.errors?.['passwordMismatch']"
+            [class.border-gray-300]="!isFieldInvalid('confirmPassword') && !signupForm.errors?.['passwordMismatch']"
+            [class.focus:border-indigo-500]="!isFieldInvalid('confirmPassword') && !signupForm.errors?.['passwordMismatch']"
+            [class.focus:ring-indigo-500]="!isFieldInvalid('confirmPassword') && !signupForm.errors?.['passwordMismatch']"
+            class="appearance-none relative block w-full px-3 py-2 pr-10 border placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm"
+            placeholder="Confirm your password"
+            autocomplete="new-password"
+            required
+          />
+          <button
+            type="button"
+            (click)="toggleConfirmPasswordVisibility()"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center"
+          >
+            <svg *ngIf="!showConfirmPassword" class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <svg *ngIf="showConfirmPassword" class="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+            </svg>
+          </button>
+        </div>
+        <p *ngIf="isFieldInvalid('confirmPassword')" class="mt-2 text-sm text-red-600">
+          {{ getErrorMessage('confirmPassword') }}
+        </p>
+        <p *ngIf="signupForm.errors?.['passwordMismatch'] && signupForm.get('confirmPassword')?.touched" class="mt-2 text-sm text-red-600">
+          Passwords do not match.
+        </p>
+      </div>
+
+      <!-- Terms and Conditions -->
+      <div class="flex items-center">
+        <input
+          id="terms"
+          name="terms"
+          type="checkbox"
+          class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          required
+        />
+        <label for="terms" class="ml-2 block text-sm text-gray-900">
+          I agree to the 
+          <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Terms and Conditions</a>
+          and 
+          <a href="#" class="font-medium text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+        </label>
+      </div>
+
+      <!-- Submit Button -->
+      <div>
+        <button
+          type="submit"
+          [disabled]="isLoading"
+          class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span *ngIf="isLoading" class="absolute left-0 inset-y-0 flex items-center pl-3">
+            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </span>
+          <span *ngIf="!isLoading">Create Account</span>
+          <span *ngIf="isLoading">Creating Account...</span>
+        </button>
+      </div>
+
+      <!-- Sign In Link -->
+      <div class="text-center">
+        <p class="text-sm text-gray-600">
+          Already have an account?
+          <a routerLink="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+            Sign in here
+          </a>
+        </p>
+      </div>
     </form>
   </div>
-</div> -->
+</div>
