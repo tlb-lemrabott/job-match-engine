@@ -1,1 +1,267 @@
-<p>profile works!</p>
+<div class="profile-container">
+  <!-- Header Section -->
+  <div class="profile-header">
+    <h1>User Profile</h1>
+    <div class="user-info" *ngIf="user">
+      <p>Welcome, <strong>{{ user.name }}</strong></p>
+      <p class="user-email">{{ user.email }}</p>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="tab-navigation">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'resume'"
+      (click)="setActiveTab('resume')">
+      <i class="fas fa-file-alt"></i>
+      Resume Management
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'matching'"
+      (click)="setActiveTab('matching')">
+      <i class="fas fa-search"></i>
+      Job Matching
+    </button>
+  </div>
+
+  <!-- Resume Management Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'resume'">
+    <div class="resume-section">
+      <h2>Resume Management</h2>
+      
+      <!-- Current Resume Display -->
+      <div class="current-resume" *ngIf="userResume">
+        <div class="resume-card">
+          <div class="resume-info">
+            <div class="resume-icon">
+              <i class="fas fa-file-pdf" *ngIf="userResume.fileType === 'application/pdf'"></i>
+              <i class="fas fa-file-word" *ngIf="userResume.fileType !== 'application/pdf'"></i>
+            </div>
+            <div class="resume-details">
+              <h3>{{ userResume.fileName }}</h3>
+              <p class="resume-meta">
+                <span class="file-type">{{ getFileTypeDisplayName(userResume.fileType) }}</span>
+                <span class="file-size">{{ formatFileSize(userResume.fileSize) }}</span>
+                <span class="upload-date">Uploaded: {{ userResume.uploadDate | date:'medium' }}</span>
+              </p>
+            </div>
+          </div>
+          <div class="resume-actions">
+            <button class="btn btn-danger" (click)="deleteResume()">
+              <i class="fas fa-trash"></i>
+              Delete Resume
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload New Resume -->
+      <div class="upload-section">
+        <h3>Upload New Resume</h3>
+        <div class="upload-area">
+          <div class="file-input-container">
+            <input 
+              type="file" 
+              id="resumeFile" 
+              accept=".pdf,.doc,.docx"
+              (change)="onFileSelected($event)"
+              [disabled]="isUploading">
+            <label for="resumeFile" class="file-input-label">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <span *ngIf="!selectedFile">Choose a file or drag it here</span>
+              <span *ngIf="selectedFile">Selected: {{ selectedFile.name }}</span>
+            </label>
+          </div>
+          
+          <div class="file-info" *ngIf="selectedFile">
+            <p><strong>File:</strong> {{ selectedFile.name }}</p>
+            <p><strong>Size:</strong> {{ formatFileSize(selectedFile.size) }}</p>
+            <p><strong>Type:</strong> {{ getFileTypeDisplayName(selectedFile.type) }}</p>
+          </div>
+
+          <div class="upload-error" *ngIf="uploadError">
+            <i class="fas fa-exclamation-triangle"></i>
+            {{ uploadError }}
+          </div>
+
+          <button 
+            class="btn btn-primary upload-btn" 
+            (click)="uploadResume()"
+            [disabled]="!selectedFile || isUploading">
+            <i class="fas fa-upload" *ngIf="!isUploading"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="isUploading"></i>
+            {{ isUploading ? 'Uploading...' : 'Upload Resume' }}
+          </button>
+
+          <!-- Upload Progress -->
+          <div class="progress-container" *ngIf="isUploading">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+            </div>
+            <p class="progress-text">{{ uploadProgress }}%</p>
+          </div>
+        </div>
+
+        <div class="upload-help">
+          <h4>Supported Formats:</h4>
+          <ul>
+            <li>PDF (.pdf)</li>
+            <li>Microsoft Word (.doc, .docx)</li>
+          </ul>
+          <p><strong>Maximum file size:</strong> 10MB</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Job Matching Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'matching'">
+    <div class="matching-section">
+      <h2>Job Matching Analysis</h2>
+      
+      <!-- Resume Requirement Check -->
+      <div class="resume-check" *ngIf="!userResume">
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Please upload your resume first to use the job matching feature.</p>
+          <button class="btn btn-primary" (click)="setActiveTab('resume')">
+            Go to Resume Management
+          </button>
+        </div>
+      </div>
+
+      <!-- Job Matching Form -->
+      <div class="matching-form" *ngIf="userResume">
+        <form [formGroup]="jobMatchingForm" (ngSubmit)="checkJobMatch()">
+          <div class="form-group">
+            <label for="analysisType">Analysis Type:</label>
+            <select id="analysisType" formControlName="analysisType" class="form-control">
+              <option value="full-job">Full Job Description</option>
+              <option value="skills-section">Skills Section Only</option>
+            </select>
+            <small class="form-help">
+              Choose whether to analyze the full job description or just the skills section
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="jobDescription">Job Description:</label>
+            <textarea 
+              id="jobDescription" 
+              formControlName="jobDescription" 
+              class="form-control"
+              rows="8"
+              placeholder="Paste the job description or skills section here..."></textarea>
+            <div class="form-error" *ngIf="jobMatchingForm.get('jobDescription')?.invalid && jobMatchingForm.get('jobDescription')?.touched">
+              <span *ngIf="jobMatchingForm.get('jobDescription')?.errors?.['required']">Job description is required</span>
+              <span *ngIf="jobMatchingForm.get('jobDescription')?.errors?.['minlength']">Job description must be at least 50 characters</span>
+            </div>
+            <small class="form-help">
+              Minimum 50 characters required for accurate analysis
+            </small>
+          </div>
+
+          <div class="form-actions">
+            <button 
+              type="submit" 
+              class="btn btn-primary"
+              [disabled]="jobMatchingForm.invalid || isMatching">
+              <i class="fas fa-search" *ngIf="!isMatching"></i>
+              <i class="fas fa-spinner fa-spin" *ngIf="isMatching"></i>
+              {{ isMatching ? 'Analyzing...' : 'Check Match' }}
+            </button>
+          </div>
+        </form>
+
+        <!-- Matching Progress -->
+        <div class="progress-container" *ngIf="isMatching">
+          <div class="progress-bar">
+            <div class="progress-fill" [style.width.%]="matchingProgress"></div>
+          </div>
+          <p class="progress-text">Analyzing job match... {{ matchingProgress }}%</p>
+        </div>
+
+        <!-- Matching Error -->
+        <div class="matching-error" *ngIf="matchingError">
+          <i class="fas fa-exclamation-triangle"></i>
+          {{ matchingError }}
+        </div>
+      </div>
+
+      <!-- Matching Results -->
+      <div class="matching-results" *ngIf="matchingResult">
+        <div class="results-header">
+          <h3>Analysis Results</h3>
+          <button class="btn btn-secondary" (click)="clearMatchingResult()">
+            <i class="fas fa-times"></i>
+            Clear Results
+          </button>
+        </div>
+
+        <!-- Overall Score -->
+        <div class="score-section">
+          <div class="score-card">
+            <div class="score-circle" [style.background]="getScoreColor(matchingResult.matchingScore)">
+              <span class="score-value">{{ matchingResult.matchingScore }}%</span>
+            </div>
+            <h4>Overall Match Score</h4>
+            <p class="score-description">{{ getScoreDescription(matchingResult.matchingScore) }}</p>
+          </div>
+        </div>
+
+        <!-- Matched Skills -->
+        <div class="skills-section" *ngIf="matchingResult.matchedSkills.length > 0">
+          <h4>Matched Skills ({{ matchingResult.matchedSkills.length }})</h4>
+          <div class="skills-grid">
+            <div class="skill-card matched" *ngFor="let skill of matchingResult.matchedSkills">
+              <div class="skill-name">{{ skill.skill }}</div>
+              <div class="skill-confidence">
+                <span class="confidence-label">Confidence:</span>
+                <span class="confidence-value">{{ skill.confidence }}%</span>
+              </div>
+              <div class="skill-category" *ngIf="skill.category">
+                {{ skill.category }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Missing Skills -->
+        <div class="skills-section" *ngIf="matchingResult.missingSkills.length > 0">
+          <h4>Missing Skills ({{ matchingResult.missingSkills.length }})</h4>
+          <div class="skills-grid">
+            <div class="skill-card missing" *ngFor="let skill of matchingResult.missingSkills">
+              <div class="skill-name">{{ skill.skill }}</div>
+              <div class="skill-importance">
+                <span class="importance-label">Importance:</span>
+                <span class="importance-value">{{ skill.importance }}%</span>
+              </div>
+              <div class="skill-category" *ngIf="skill.category">
+                {{ skill.category }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analysis and Recommendations -->
+        <div class="analysis-section" *ngIf="matchingResult.analysis">
+          <h4>Analysis & Recommendations</h4>
+          <div class="analysis-content">
+            <p class="overall-match">{{ matchingResult.analysis.overallMatch }}</p>
+            
+            <div class="recommendations" *ngIf="matchingResult.analysis.recommendations.length > 0">
+              <h5>Recommendations:</h5>
+              <ul>
+                <li *ngFor="let recommendation of matchingResult.analysis.recommendations">
+                  {{ recommendation }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
