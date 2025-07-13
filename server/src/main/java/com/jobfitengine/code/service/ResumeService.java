@@ -1,0 +1,164 @@
+package com.jobfitengine.code.service;
+
+import com.jobfitengine.code.dto.ResumeResponse;
+import com.jobfitengine.code.entity.Resume;
+import com.jobfitengine.code.entity.User;
+import com.jobfitengine.code.repository.ResumeRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ResumeService {
+    
+    private final ResumeRepository resumeRepository;
+    private final DocumentTextExtractionService textExtractionService;
+    
+    @Value("${file.upload.path}")
+    private String uploadPath;
+    
+    public ResumeResponse uploadResume(MultipartFile file, User user) {
+        try {
+            // Validate file
+            if (file.isEmpty()) {
+                return new ResumeResponse(false, "File is empty", null);
+            }
+            
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                return new ResumeResponse(false, "Invalid filename", null);
+            }
+            
+            // Check file type
+            String fileType = getFileExtension(originalFilename);
+            if (!isValidFileType(fileType)) {
+                return new ResumeResponse(false, "Invalid file type. Only PDF, DOC, DOCX are allowed", null);
+            }
+            
+            // Check file size (10MB limit)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                return new ResumeResponse(false, "File size exceeds 10MB limit", null);
+            }
+            
+            // Create upload directory if it doesn't exist
+            Path uploadDir = Paths.get(uploadPath);
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+            
+            // Generate unique filename
+            String uniqueFilename = UUID.randomUUID().toString() + "." + fileType;
+            Path filePath = uploadDir.resolve(uniqueFilename);
+            
+            // Save file
+            Files.copy(file.getInputStream(), filePath);
+            
+            // Extract text from document
+            String extractedText = textExtractionService.extractText(file.getInputStream());
+            
+            // Delete existing resume if any
+            resumeRepository.findByUser(user).ifPresent(existingResume -> {
+                try {
+                    Files.deleteIfExists(Paths.get(existingResume.getFilePath()));
+                } catch (IOException e) {
+                    log.error("Error deleting existing resume file: {}", e.getMessage());
+                }
+                resumeRepository.delete(existingResume);
+            });
+            
+            // Save resume record
+            Resume resume = new Resume();
+            resume.setFileName(originalFilename);
+            resume.setFileSize(file.getSize());
+            resume.setFileType(fileType);
+            resume.setFilePath(filePath.toString());
+            resume.setExtractedText(extractedText);
+            resume.setUser(user);
+            
+            Resume savedResume = resumeRepository.save(resume);
+            
+            ResumeResponse.ResumeDto resumeDto = new ResumeResponse.ResumeDto(
+                    savedResume.getId(),
+                    savedResume.getFileName(),
+                    savedResume.getFileSize(),
+                    savedResume.getUploadDate(),
+                    savedResume.getFileType(),
+                    null // fileUrl is null for local storage
+            );
+            
+            return new ResumeResponse(true, "Resume uploaded successfully", resumeDto);
+            
+        } catch (IOException e) {
+            log.error("Error uploading resume: {}", e.getMessage());
+            return new ResumeResponse(false, "Error uploading resume: " + e.getMessage(), null);
+        }
+    }
+    
+    public ResumeResponse getUserResume(User user) {
+        Optional<Resume> resumeOpt = resumeRepository.findByUser(user);
+        
+        if (resumeOpt.isEmpty()) {
+            return new ResumeResponse(false, "No resume found for user", null);
+        }
+        
+        Resume resume = resumeOpt.get();
+        ResumeResponse.ResumeDto resumeDto = new ResumeResponse.ResumeDto(
+                resume.getId(),
+                resume.getFileName(),
+                resume.getFileSize(),
+                resume.getUploadDate(),
+                resume.getFileType(),
+                null // fileUrl is null for local storage
+        );
+        
+        return new ResumeResponse(true, "Resume retrieved successfully", resumeDto);
+    }
+    
+    public ResumeResponse deleteUserResume(User user) {
+        Optional<Resume> resumeOpt = resumeRepository.findByUser(user);
+        
+        if (resumeOpt.isEmpty()) {
+            return new ResumeResponse(false, "No resume found for user", null);
+        }
+        
+        Resume resume = resumeOpt.get();
+        
+        try {
+            // Delete file from filesystem
+            Files.deleteIfExists(Paths.get(resume.getFilePath()));
+            
+            // Delete from database
+            resumeRepository.delete(resume);
+            
+            return new ResumeResponse(true, "Resume deleted successfully", null);
+            
+        } catch (IOException e) {
+            log.error("Error deleting resume file: {}", e.getMessage());
+            return new ResumeResponse(false, "Error deleting resume: " + e.getMessage(), null);
+        }
+    }
+    
+    public Optional<Resume> findByIdAndUser(UUID resumeId, User user) {
+        return resumeRepository.findByUserAndId(user, resumeId);
+    }
+    
+    private String getFileExtension(String filename) {
+        int lastDotIndex = filename.lastIndexOf('.');
+        return lastDotIndex > 0 ? filename.substring(lastDotIndex + 1).toLowerCase() : "";
+    }
+    
+    private boolean isValidFileType(String fileType) {
+        return fileType.equals("pdf") || fileType.equals("doc") || fileType.equals("docx");
+    }
+} 
