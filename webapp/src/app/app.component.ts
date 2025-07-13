@@ -11,7 +11,7 @@ import { AuthServiceService } from './services/auth.service.service';
   styleUrl: './app.component.css'
 })
 export class AppComponent implements OnInit {
-  title = 'JobFitEngineAI';
+  title = 'JobMatchEngine';
   isAuthenticated = false;
   currentUser: any = null;
   isMenuOpen = false;
