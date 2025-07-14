@@ -30,24 +30,30 @@ public class ResumeService {
     
     public ResumeResponse uploadResume(MultipartFile file, User user) {
         try {
+            log.info("Starting resume upload for user: {}", user.getEmail());
+            
             // Validate file
             if (file.isEmpty()) {
+                log.warn("File is empty for user: {}", user.getEmail());
                 return new ResumeResponse(false, "File is empty", null);
             }
             
             String originalFilename = file.getOriginalFilename();
             if (originalFilename == null || originalFilename.isEmpty()) {
+                log.warn("Invalid filename for user: {}", user.getEmail());
                 return new ResumeResponse(false, "Invalid filename", null);
             }
             
             // Check file type
             String fileType = getFileExtension(originalFilename);
             if (!isValidFileType(fileType)) {
+                log.warn("Invalid file type: {} for user: {}", fileType, user.getEmail());
                 return new ResumeResponse(false, "Invalid file type. Only PDF, DOC, DOCX are allowed", null);
             }
             
             // Check file size (10MB limit)
             if (file.getSize() > 10 * 1024 * 1024) {
+                log.warn("File size exceeds limit: {} bytes for user: {}", file.getSize(), user.getEmail());
                 return new ResumeResponse(false, "File size exceeds 10MB limit", null);
             }
             
@@ -71,10 +77,10 @@ public class ResumeService {
             resumeRepository.findByUser(user).ifPresent(existingResume -> {
                 try {
                     Files.deleteIfExists(Paths.get(existingResume.getFilePath()));
+                    resumeRepository.delete(existingResume);
                 } catch (IOException e) {
                     log.error("Error deleting existing resume file: {}", e.getMessage());
                 }
-                resumeRepository.delete(existingResume);
             });
             
             // Save resume record
@@ -97,10 +103,14 @@ public class ResumeService {
                     null // fileUrl is null for local storage
             );
             
+            log.info("Resume upload completed successfully for user: {}", user.getEmail());
             return new ResumeResponse(true, "Resume uploaded successfully", resumeDto);
             
         } catch (IOException e) {
-            log.error("Error uploading resume: {}", e.getMessage());
+            log.error("Error uploading resume for user {}: {}", user.getEmail(), e.getMessage());
+            return new ResumeResponse(false, "Error uploading resume: " + e.getMessage(), null);
+        } catch (Exception e) {
+            log.error("Unexpected error uploading resume for user {}: {}", user.getEmail(), e.getMessage());
             return new ResumeResponse(false, "Error uploading resume: " + e.getMessage(), null);
         }
     }

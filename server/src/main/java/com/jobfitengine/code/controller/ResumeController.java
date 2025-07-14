@@ -28,6 +28,12 @@ public class ResumeController {
                                                       HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
+            
+            if (userId == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ResumeResponse(false, "Authentication failed: No user ID found", null));
+            }
+            
             User user = userService.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -54,6 +60,12 @@ public class ResumeController {
     public ResponseEntity<ResumeResponse> getUserResume(HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
+            
+            if (userId == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ResumeResponse(false, "Authentication failed: No user ID found", null));
+            }
+            
             User user = userService.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
