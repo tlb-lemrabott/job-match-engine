@@ -90,6 +90,12 @@ public class ResumeController {
     public ResponseEntity<ResumeResponse> deleteUserResume(HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
+            
+            if (userId == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ResumeResponse(false, "Authentication failed: No user ID found", null));
+            }
+            
             User user = userService.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
@@ -101,7 +107,7 @@ public class ResumeController {
                 log.info("Resume deleted successfully for user: {}", user.getEmail());
                 return ResponseEntity.ok(response);
             } else {
-                log.warn("Resume deletion failed for user: {}", user.getEmail());
+                log.warn("Resume deletion failed for user: {} - {}", user.getEmail(), response.getMessage());
                 return ResponseEntity.badRequest().body(response);
             }
             

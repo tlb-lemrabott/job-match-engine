@@ -115,7 +115,11 @@ export class ResumeService {
 
     return this.http.delete<ResumeDeleteResponse>(`${this.apiUrl}/resume/user`, httpOptions)
       .pipe(
+        tap(response => {
+          console.log('Delete resume response:', response);
+        }),
         catchError(error => {
+          console.error('Delete resume error:', error);
           return throwError(() => new Error(error.error?.message || 'Failed to delete resume.'));
         })
       );

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -135,26 +136,46 @@ public class ResumeService {
         return new ResumeResponse(true, "Resume retrieved successfully", resumeDto);
     }
     
+    @Transactional
     public ResumeResponse deleteUserResume(User user) {
+        log.info("Starting resume deletion for user: {}", user.getEmail());
+        
         Optional<Resume> resumeOpt = resumeRepository.findByUser(user);
         
         if (resumeOpt.isEmpty()) {
+            log.warn("No resume found for user: {}", user.getEmail());
             return new ResumeResponse(false, "No resume found for user", null);
         }
         
         Resume resume = resumeOpt.get();
+        log.info("Found resume to delete - ID: {}, File: {}", resume.getId(), resume.getFileName());
         
         try {
             // Delete file from filesystem
-            Files.deleteIfExists(Paths.get(resume.getFilePath()));
+            Path filePath = Paths.get(resume.getFilePath());
+            boolean fileDeleted = Files.deleteIfExists(filePath);
+            log.info("File deletion result: {} for path: {}", fileDeleted, filePath);
             
             // Delete from database
             resumeRepository.delete(resume);
+            log.info("Resume record deleted from database for user: {}", user.getEmail());
+            
+            // Verify deletion
+            Optional<Resume> verifyDeletion = resumeRepository.findByUser(user);
+            if (verifyDeletion.isPresent()) {
+                log.error("Resume still exists in database after deletion for user: {}", user.getEmail());
+                return new ResumeResponse(false, "Failed to delete resume from database", null);
+            } else {
+                log.info("Resume deletion verified successfully for user: {}", user.getEmail());
+            }
             
             return new ResumeResponse(true, "Resume deleted successfully", null);
             
         } catch (IOException e) {
-            log.error("Error deleting resume file: {}", e.getMessage());
+            log.error("Error deleting resume file for user {}: {}", user.getEmail(), e.getMessage());
+            return new ResumeResponse(false, "Error deleting resume: " + e.getMessage(), null);
+        } catch (Exception e) {
+            log.error("Unexpected error deleting resume for user {}: {}", user.getEmail(), e.getMessage());
             return new ResumeResponse(false, "Error deleting resume: " + e.getMessage(), null);
         }
     }

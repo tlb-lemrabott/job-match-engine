@@ -123,11 +123,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.resumeService.deleteResume()
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
-            this.userResume = null;
+          next: (response) => {
+            console.log('Delete response:', response);
+            if (response.success) {
+              // Clear the resume from UI
+              this.userResume = null;
+              // Show success message
+              alert('Resume deleted successfully!');
+              // Reload resume data to ensure UI is in sync
+              this.loadUserResume();
+            } else {
+              alert('Failed to delete resume: ' + response.message);
+            }
           },
           error: (error) => {
-            // Handle error silently or show user-friendly message
+            console.error('Delete error:', error);
+            // Show error message to user
+            alert('Failed to delete resume: ' + error.message);
           }
         });
     }
