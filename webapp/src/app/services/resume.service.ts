@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, tap, map } from 'rxjs/operators';
 
 export interface Resume {
   id: string;
@@ -16,6 +16,12 @@ export interface ResumeUploadResponse {
   success: boolean;
   message: string;
   resume?: Resume;
+}
+
+export interface ResumeResponse {
+  success: boolean;
+  message: string;
+  data?: Resume;
 }
 
 export interface ResumeDeleteResponse {
@@ -60,10 +66,21 @@ export class ResumeService {
       })
     };
 
-    return this.http.get<Resume>(`${this.apiUrl}/resume/user`, httpOptions)
+    return this.http.get<ResumeResponse | Resume>(`${this.apiUrl}/resume/user`, httpOptions)
       .pipe(
         tap(response => {
           console.log('Raw API response from getUserResume:', response);
+        }),
+        map(response => {
+          // Handle both direct Resume object and wrapped response
+          if (response && typeof response === 'object' && 'data' in response) {
+            const resumeData = (response as ResumeResponse).data;
+            if (!resumeData) {
+              throw new Error('No resume data found in response');
+            }
+            return resumeData;
+          }
+          return response as Resume;
         }),
         catchError(error => {
           console.error('Get resume error:', error);

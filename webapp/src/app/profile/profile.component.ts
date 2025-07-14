@@ -58,11 +58,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       console.log('=== DEBUGGING: Simulating backend response ===');
       const mockResume = {
-        id: '123',
-        filename: 'test-resume.pdf', // Note: different property name
-        size: '1024000', // Note: string instead of number
-        type: 'application/pdf', // Note: different property name
-        createdAt: '2024-01-15T10:30:00Z' // Note: different property name
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        fileName: 'test-resume.pdf',
+        fileSize: 1024000,
+        fileType: 'application/pdf',
+        fileUrl: 'http://localhost:8080/files/test-resume.pdf',
+        uploadDate: {
+          year: 2024,
+          monthValue: 1,
+          dayOfMonth: 15,
+          hour: 10,
+          minute: 30,
+          second: 0,
+          toString: () => '2024-01-15T10:30:00'
+        }
       };
       console.log('Mock backend response:', mockResume);
       const processed = this.processResumeData(mockResume);
@@ -152,20 +161,24 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resume) => {
+          console.log('=== RESUME DATA DEBUG ===');
           console.log('Raw resume data from API:', resume);
           console.log('Resume type:', typeof resume);
           console.log('Resume keys:', Object.keys(resume));
+          console.log('Resume JSON:', JSON.stringify(resume, null, 2));
           
           // Debug each property
           console.log('fileName:', resume.fileName, 'type:', typeof resume.fileName);
           console.log('fileSize:', resume.fileSize, 'type:', typeof resume.fileSize);
           console.log('fileType:', resume.fileType, 'type:', typeof resume.fileType);
           console.log('uploadDate:', resume.uploadDate, 'type:', typeof resume.uploadDate);
+          console.log('uploadDate JSON:', JSON.stringify(resume.uploadDate, null, 2));
           
           // Handle potential data type issues and backend format differences
           const processedResume = this.processResumeData(resume);
           this.userResume = processedResume;
           console.log('Processed userResume:', this.userResume);
+          console.log('=== END RESUME DATA DEBUG ===');
         },
         error: (error) => {
           // User might not have a resume yet, which is fine
@@ -265,14 +278,14 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private processResumeData(resume: any): Resume {
     console.log('Processing resume data:', resume);
     
-    // Handle different possible property names from backend
+    // Backend entity properties match frontend interface
     const processedResume: Resume = {
-      id: resume.id || resume._id || resume.resumeId || '',
-      fileName: resume.fileName || resume.filename || resume.name || '',
-      fileSize: this.parseFileSize(resume.fileSize || resume.size || resume.file_size),
-      fileType: resume.fileType || resume.type || resume.mimeType || '',
-      uploadDate: this.parseUploadDate(resume.uploadDate || resume.createdAt || resume.upload_date),
-      fileUrl: resume.fileUrl || resume.url || resume.file_url
+      id: resume.id || '',
+      fileName: resume.fileName || '',
+      fileSize: this.parseFileSize(resume.fileSize),
+      fileType: resume.fileType || '',
+      uploadDate: this.parseUploadDate(resume.uploadDate),
+      fileUrl: resume.fileUrl
     };
     
     console.log('Processed resume:', processedResume);
@@ -285,6 +298,11 @@ export class ProfileComponent implements OnInit, OnDestroy {
       const parsed = parseInt(size, 10);
       return isNaN(parsed) ? 0 : parsed;
     }
+    // Handle Java Long type (might be serialized as string)
+    if (size && typeof size === 'object' && size.toString) {
+      const parsed = parseInt(size.toString(), 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
     return 0;
   }
 
@@ -293,6 +311,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (typeof date === 'string') {
       const parsed = new Date(date);
       return isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+    // Handle Java LocalDateTime object (might have specific properties)
+    if (date && typeof date === 'object') {
+      // If it's a Java LocalDateTime, it might have year, month, day, etc.
+      if (date.year && date.monthValue && date.dayOfMonth) {
+        return new Date(date.year, date.monthValue - 1, date.dayOfMonth, 
+                       date.hour || 0, date.minute || 0, date.second || 0);
+      }
+      // If it has a toString method, try parsing it
+      if (date.toString) {
+        const parsed = new Date(date.toString());
+        return isNaN(parsed.getTime()) ? new Date() : parsed;
+      }
     }
     return new Date();
   }
