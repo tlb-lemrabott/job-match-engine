@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 
 export interface Resume {
   id: string;
@@ -43,6 +43,9 @@ export class ResumeService {
 
     return this.http.post<ResumeUploadResponse>(`${this.apiUrl}/resume/upload`, formData, httpOptions)
       .pipe(
+        tap(response => {
+          console.log('Raw API response from uploadResume:', response);
+        }),
         catchError(error => {
           console.error('Resume upload error:', error);
           return throwError(() => new Error(error.error?.message || 'Resume upload failed. Please try again.'));
@@ -59,6 +62,9 @@ export class ResumeService {
 
     return this.http.get<Resume>(`${this.apiUrl}/resume/user`, httpOptions)
       .pipe(
+        tap(response => {
+          console.log('Raw API response from getUserResume:', response);
+        }),
         catchError(error => {
           console.error('Get resume error:', error);
           return throwError(() => new Error(error.error?.message || 'Failed to fetch resume.'));

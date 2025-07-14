@@ -33,6 +33,7 @@
       
       <!-- Current Resume Display -->
       <div class="current-resume" *ngIf="userResume">
+        
         <div class="resume-card">
           <div class="resume-info">
             <div class="resume-icon">
@@ -40,12 +41,20 @@
               <i class="fas fa-file-word" *ngIf="userResume.fileType !== 'application/pdf'"></i>
             </div>
             <div class="resume-details">
-              <h3>{{ userResume.fileName }}</h3>
+              <h3>{{ userResume.fileName || 'No filename' }}</h3>
               <p class="resume-meta">
                 <span class="file-type">{{ getFileTypeDisplayName(userResume.fileType) }}</span>
                 <span class="file-size">{{ formatFileSize(userResume.fileSize) }}</span>
-                <span class="upload-date">Uploaded: {{ userResume.uploadDate | date:'medium' }}</span>
+                <span class="upload-date">Uploaded At: {{ userResume.uploadDate | date:'medium' }}</span>
               </p>
+              <!-- Debug info -->
+              <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                <p>Debug Info:</p>
+                <p>fileName: "{{ userResume.fileName }}" ({{ typeof userResume.fileName }})</p>
+                <p>fileSize: {{ userResume.fileSize }} ({{ typeof userResume.fileSize }})</p>
+                <p>fileType: "{{ userResume.fileType }}" ({{ typeof userResume.fileType }})</p>
+                <p>uploadDate: {{ userResume.uploadDate }} ({{ typeof userResume.uploadDate }})</p>
+              </div>
             </div>
           </div>
           <div class="resume-actions">

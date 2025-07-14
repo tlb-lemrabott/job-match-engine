@@ -53,6 +53,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.user = this.authService.getUser();
     this.loadUserResume();
+    
+    // For debugging: simulate what might be returned from backend
+    setTimeout(() => {
+      console.log('=== DEBUGGING: Simulating backend response ===');
+      const mockResume = {
+        id: '123',
+        filename: 'test-resume.pdf', // Note: different property name
+        size: '1024000', // Note: string instead of number
+        type: 'application/pdf', // Note: different property name
+        createdAt: '2024-01-15T10:30:00Z' // Note: different property name
+      };
+      console.log('Mock backend response:', mockResume);
+      const processed = this.processResumeData(mockResume);
+      console.log('After processing:', processed);
+    }, 2000);
   }
 
   ngOnDestroy(): void {
@@ -97,6 +112,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('Upload response:', response);
           clearInterval(progressInterval);
           this.uploadProgress = 100;
           
@@ -136,11 +152,25 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resume) => {
-          this.userResume = resume;
+          console.log('Raw resume data from API:', resume);
+          console.log('Resume type:', typeof resume);
+          console.log('Resume keys:', Object.keys(resume));
+          
+          // Debug each property
+          console.log('fileName:', resume.fileName, 'type:', typeof resume.fileName);
+          console.log('fileSize:', resume.fileSize, 'type:', typeof resume.fileSize);
+          console.log('fileType:', resume.fileType, 'type:', typeof resume.fileType);
+          console.log('uploadDate:', resume.uploadDate, 'type:', typeof resume.uploadDate);
+          
+          // Handle potential data type issues and backend format differences
+          const processedResume = this.processResumeData(resume);
+          this.userResume = processedResume;
+          console.log('Processed userResume:', this.userResume);
         },
         error: (error) => {
           // User might not have a resume yet, which is fine
           console.log('No resume found for user');
+          console.error('Resume fetch error:', error);
         }
       });
   }
@@ -207,10 +237,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   // Utility Methods
   getFileTypeDisplayName(fileType: string): string {
+    if (!fileType) {
+      console.warn('getFileTypeDisplayName called with empty fileType:', fileType);
+      return 'Unknown';
+    }
     return this.fileUploadService.getFileTypeDisplayName(fileType);
   }
 
   formatFileSize(bytes: number): string {
+    if (!bytes || isNaN(bytes)) {
+      console.warn('formatFileSize called with invalid bytes:', bytes);
+      return '0 Bytes';
+    }
     return this.fileUploadService.formatFileSize(bytes);
   }
 
@@ -221,6 +259,42 @@ export class ProfileComponent implements OnInit, OnDestroy {
   clearMatchingResult(): void {
     this.matchingResult = null;
     this.matchingError = '';
+  }
+
+  // Data processing methods
+  private processResumeData(resume: any): Resume {
+    console.log('Processing resume data:', resume);
+    
+    // Handle different possible property names from backend
+    const processedResume: Resume = {
+      id: resume.id || resume._id || resume.resumeId || '',
+      fileName: resume.fileName || resume.filename || resume.name || '',
+      fileSize: this.parseFileSize(resume.fileSize || resume.size || resume.file_size),
+      fileType: resume.fileType || resume.type || resume.mimeType || '',
+      uploadDate: this.parseUploadDate(resume.uploadDate || resume.createdAt || resume.upload_date),
+      fileUrl: resume.fileUrl || resume.url || resume.file_url
+    };
+    
+    console.log('Processed resume:', processedResume);
+    return processedResume;
+  }
+
+  private parseFileSize(size: any): number {
+    if (typeof size === 'number') return size;
+    if (typeof size === 'string') {
+      const parsed = parseInt(size, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  private parseUploadDate(date: any): Date {
+    if (date instanceof Date) return date;
+    if (typeof date === 'string') {
+      const parsed = new Date(date);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+    return new Date();
   }
 
   // Score utility methods
