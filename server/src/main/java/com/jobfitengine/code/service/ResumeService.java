@@ -148,7 +148,8 @@ public class ResumeService {
         }
         
         Resume resume = resumeOpt.get();
-        log.info("Found resume to delete - ID: {}, File: {}", resume.getId(), resume.getFileName());
+        UUID resumeId = resume.getId();
+        log.info("Found resume to delete - ID: {}, File: {}", resumeId, resume.getFileName());
         
         try {
             // Delete file from filesystem
@@ -156,18 +157,9 @@ public class ResumeService {
             boolean fileDeleted = Files.deleteIfExists(filePath);
             log.info("File deletion result: {} for path: {}", fileDeleted, filePath);
             
-            // Delete from database
-            resumeRepository.delete(resume);
+            // Delete from database using ID
+            resumeRepository.deleteById(resumeId);
             log.info("Resume record deleted from database for user: {}", user.getEmail());
-            
-            // Verify deletion
-            Optional<Resume> verifyDeletion = resumeRepository.findByUser(user);
-            if (verifyDeletion.isPresent()) {
-                log.error("Resume still exists in database after deletion for user: {}", user.getEmail());
-                return new ResumeResponse(false, "Failed to delete resume from database", null);
-            } else {
-                log.info("Resume deletion verified successfully for user: {}", user.getEmail());
-            }
             
             return new ResumeResponse(true, "Resume deleted successfully", null);
             
