@@ -54,6 +54,10 @@
                 <p>fileSize: {{ userResume.fileSize }} ({{ typeof userResume.fileSize }})</p>
                 <p>fileType: "{{ userResume.fileType }}" ({{ typeof userResume.fileType }})</p>
                 <p>uploadDate: {{ userResume.uploadDate }} ({{ typeof userResume.uploadDate }})</p>
+                <div style="margin-top: 10px;">
+                  <button class="btn btn-secondary" style="font-size: 10px; padding: 4px 8px; margin-right: 5px;" (click)="refreshResumeData()">Refresh</button>
+                  <button class="btn btn-secondary" style="font-size: 10px; padding: 4px 8px;" (click)="clearResumeData()">Clear</button>
+                </div>
               </div>
             </div>
           </div>

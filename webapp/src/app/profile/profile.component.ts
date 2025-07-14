@@ -138,8 +138,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
           },
           error: (error) => {
             console.error('Delete error:', error);
-            // Show error message to user
-            alert('Failed to delete resume: ' + error.message);
+            
+            // Handle specific error cases
+            if (error.message.includes('inconsistent state')) {
+              // If resume is in inconsistent state, clear it from UI and suggest re-upload
+              this.userResume = null;
+              alert('Resume record was corrupted. It has been cleared. Please upload a new resume.');
+            } else if (error.message.includes('not found')) {
+              // If resume not found, clear it from UI
+              this.userResume = null;
+              alert('Resume not found. It has been cleared from the interface.');
+            } else {
+              // Show generic error message
+              alert('Failed to delete resume: ' + error.message);
+            }
           }
         });
     }
@@ -237,12 +249,22 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  clearMatchingResult(): void {
+    clearMatchingResult(): void {
     this.matchingResult = null;
     this.matchingError = '';
   }
 
+  // Force refresh resume data (useful for debugging)
+  refreshResumeData(): void {
+    console.log('Force refreshing resume data...');
+    this.loadUserResume();
+  }
 
+  // Clear resume data (useful for debugging corrupted records)
+  clearResumeData(): void {
+    console.log('Clearing resume data from UI...');
+    this.userResume = null;
+  }
 
   // Score utility methods
   getScoreColor(score: number): string {

@@ -120,7 +120,22 @@ export class ResumeService {
         }),
         catchError(error => {
           console.error('Delete resume error:', error);
-          return throwError(() => new Error(error.error?.message || 'Failed to delete resume.'));
+          
+          // Handle specific Hibernate/JPA errors
+          if (error.error?.message?.includes('TransientObjectException')) {
+            return throwError(() => new Error('Resume record is in an inconsistent state. Please try uploading a new resume.'));
+          }
+          
+          // Handle other common errors
+          if (error.status === 404) {
+            return throwError(() => new Error('Resume not found. It may have already been deleted.'));
+          }
+          
+          if (error.status === 403) {
+            return throwError(() => new Error('You do not have permission to delete this resume.'));
+          }
+          
+          return throwError(() => new Error(error.error?.message || 'Failed to delete resume. Please try again.'));
         })
       );
   }
