@@ -21,12 +21,26 @@ export interface ResumeUploadResponse {
 export interface ResumeResponse {
   success: boolean;
   message: string;
-  data?: Resume;
+  resume?: Resume;
 }
 
 export interface ResumeDeleteResponse {
   success: boolean;
   message: string;
+}
+
+// Backend response structure
+export interface BackendResumeResponse {
+  success: boolean;
+  message: string;
+  resume?: {
+    id: string;
+    fileName: string;
+    fileSize: number;
+    uploadDate: string; // Java LocalDateTime comes as string
+    fileType: string;
+    fileUrl?: string;
+  };
 }
 
 @Injectable({
@@ -41,26 +55,30 @@ export class ResumeService {
     const formData = new FormData();
     formData.append('resume', file);
 
-    console.log('Uploading file:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    });
-
     const httpOptions = {
       headers: new HttpHeaders({
         'Authorization': `Bearer ${this.getAuthToken()}`
       })
     };
 
-    return this.http.post<ResumeUploadResponse>(`${this.apiUrl}/resume/upload`, formData, httpOptions)
+    return this.http.post<BackendResumeResponse>(`${this.apiUrl}/resume/upload`, formData, httpOptions)
       .pipe(
-        tap(response => {
-          console.log('Raw API response from uploadResume:', response);
-          console.log('Upload response JSON:', JSON.stringify(response, null, 2));
+        map(response => {
+          if (response.success && response.resume) {
+            return {
+              success: true,
+              message: response.message,
+              resume: this.mapBackendResumeToFrontend(response.resume)
+            };
+          } else {
+            return {
+              success: false,
+              message: response.message,
+              resume: undefined
+            };
+          }
         }),
         catchError(error => {
-          console.error('Resume upload error:', error);
           return throwError(() => new Error(error.error?.message || 'Resume upload failed. Please try again.'));
         })
       );
@@ -73,24 +91,16 @@ export class ResumeService {
       })
     };
 
-    return this.http.get<ResumeResponse | Resume>(`${this.apiUrl}/resume/user`, httpOptions)
+    return this.http.get<BackendResumeResponse>(`${this.apiUrl}/resume/user`, httpOptions)
       .pipe(
-        tap(response => {
-          console.log('Raw API response from getUserResume:', response);
-        }),
         map(response => {
-          // Handle both direct Resume object and wrapped response
-          if (response && typeof response === 'object' && 'data' in response) {
-            const resumeData = (response as ResumeResponse).data;
-            if (!resumeData) {
-              throw new Error('No resume data found in response');
-            }
-            return resumeData;
+          if (response.success && response.resume) {
+            return this.mapBackendResumeToFrontend(response.resume);
+          } else {
+            throw new Error(response.message || 'No resume found');
           }
-          return response as Resume;
         }),
         catchError(error => {
-          console.error('Get resume error:', error);
           return throwError(() => new Error(error.error?.message || 'Failed to fetch resume.'));
         })
       );
@@ -106,10 +116,68 @@ export class ResumeService {
     return this.http.delete<ResumeDeleteResponse>(`${this.apiUrl}/resume/user`, httpOptions)
       .pipe(
         catchError(error => {
-          console.error('Delete resume error:', error);
           return throwError(() => new Error(error.error?.message || 'Failed to delete resume.'));
         })
       );
+  }
+
+  private mapBackendResumeToFrontend(backendResume: any): Resume {
+    return {
+      id: backendResume.id || '',
+      fileName: backendResume.fileName || 'Unknown File',
+      fileSize: this.parseFileSize(backendResume.fileSize),
+      fileType: backendResume.fileType || 'application/octet-stream',
+      uploadDate: this.parseUploadDate(backendResume.uploadDate),
+      fileUrl: backendResume.fileUrl
+    };
+  }
+
+  private parseFileSize(size: any): number {
+    if (typeof size === 'number') {
+      return size;
+    }
+    if (typeof size === 'string') {
+      const parsed = parseInt(size, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  private parseUploadDate(dateString: any): Date {
+    if (!dateString) {
+      return new Date();
+    }
+    
+    if (dateString instanceof Date) {
+      return dateString;
+    }
+    
+    if (typeof dateString === 'string') {
+      try {
+        return new Date(dateString);
+      } catch (error) {
+        return new Date();
+      }
+    }
+    
+    if (typeof dateString === 'object' && dateString !== null) {
+      try {
+        if (dateString.year && dateString.monthValue && dateString.dayOfMonth) {
+          return new Date(
+            dateString.year,
+            dateString.monthValue - 1,
+            dateString.dayOfMonth,
+            dateString.hour || 0,
+            dateString.minute || 0,
+            dateString.second || 0
+          );
+        }
+      } catch (error) {
+        // Fallback to current date
+      }
+    }
+    
+    return new Date();
   }
 
   private getAuthToken(): string | null {
