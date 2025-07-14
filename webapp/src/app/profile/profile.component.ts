@@ -54,29 +54,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.user = this.authService.getUser();
     this.loadUserResume();
     
-    // For debugging: simulate what might be returned from backend
-    setTimeout(() => {
-      console.log('=== DEBUGGING: Simulating backend response ===');
-      const mockResume = {
-        id: '550e8400-e29b-41d4-a716-446655440000',
-        fileName: 'test-resume.pdf',
-        fileSize: 1024000,
-        fileType: 'application/pdf',
-        fileUrl: 'http://localhost:8080/files/test-resume.pdf',
-        uploadDate: {
-          year: 2024,
-          monthValue: 1,
-          dayOfMonth: 15,
-          hour: 10,
-          minute: 30,
-          second: 0,
-          toString: () => '2024-01-15T10:30:00'
-        }
-      };
-      console.log('Mock backend response:', mockResume);
-      const processed = this.processResumeData(mockResume);
-      console.log('After processing:', processed);
-    }, 2000);
+    
   }
 
   ngOnDestroy(): void {
@@ -121,7 +99,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Upload response:', response);
           clearInterval(progressInterval);
           this.uploadProgress = 100;
           
@@ -150,7 +127,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
             this.userResume = null;
           },
           error: (error) => {
-            console.error('Delete resume error:', error);
+            // Handle error silently or show user-friendly message
           }
         });
     }
@@ -161,42 +138,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resume) => {
-          console.log('=== RESUME DATA DEBUG ===');
-          console.log('Raw resume data from API:', resume);
-          console.log('Resume type:', typeof resume);
-          console.log('Resume keys:', Object.keys(resume));
-          console.log('Resume JSON:', JSON.stringify(resume, null, 2));
-          console.log('Resume hasOwnProperty checks:');
-          console.log('- has fileName:', resume.hasOwnProperty('fileName'));
-          console.log('- has fileSize:', resume.hasOwnProperty('fileSize'));
-          console.log('- has fileType:', resume.hasOwnProperty('fileType'));
-          console.log('- has uploadDate:', resume.hasOwnProperty('uploadDate'));
-          console.log('Checking for alternative property names:');
-          console.log('- has file_name:', resume.hasOwnProperty('file_name'));
-          console.log('- has file_size:', resume.hasOwnProperty('file_size'));
-          console.log('- has file_type:', resume.hasOwnProperty('file_type'));
-          console.log('- has upload_date:', resume.hasOwnProperty('upload_date'));
-          console.log('- has name:', resume.hasOwnProperty('name'));
-          console.log('- has size:', resume.hasOwnProperty('size'));
-          console.log('- has type:', resume.hasOwnProperty('type'));
-          
-          // Debug each property
-          console.log('fileName:', resume.fileName, 'type:', typeof resume.fileName);
-          console.log('fileSize:', resume.fileSize, 'type:', typeof resume.fileSize);
-          console.log('fileType:', resume.fileType, 'type:', typeof resume.fileType);
-          console.log('uploadDate:', resume.uploadDate, 'type:', typeof resume.uploadDate);
-          console.log('uploadDate JSON:', JSON.stringify(resume.uploadDate, null, 2));
-          
-          // Handle potential data type issues and backend format differences
-          const processedResume = this.processResumeData(resume);
-          this.userResume = processedResume;
-          console.log('Processed userResume:', this.userResume);
-          console.log('=== END RESUME DATA DEBUG ===');
+          this.userResume = resume;
         },
         error: (error) => {
-          // User might not have a resume yet, which is fine
-          console.log('No resume found for user');
-          console.error('Resume fetch error:', error);
+          this.userResume = null;
         }
       });
   }
@@ -264,7 +209,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
   // Utility Methods
   getFileTypeDisplayName(fileType: string): string {
     if (!fileType) {
-      console.warn('getFileTypeDisplayName called with empty fileType:', fileType);
       return 'Unknown';
     }
     return this.fileUploadService.getFileTypeDisplayName(fileType);
@@ -272,7 +216,6 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   formatFileSize(bytes: number): string {
     if (!bytes || isNaN(bytes)) {
-      console.warn('formatFileSize called with invalid bytes:', bytes);
       return '0 Bytes';
     }
     return this.fileUploadService.formatFileSize(bytes);
@@ -287,64 +230,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.matchingError = '';
   }
 
-  // Data processing methods
-  private processResumeData(resume: any): Resume {
-    console.log('Processing resume data:', resume);
-    
-    // Handle different possible property names from backend
-    const processedResume: Resume = {
-      id: resume.id || resume._id || '',
-      fileName: resume.fileName || resume.file_name || resume.name || 'Unknown File',
-      fileSize: this.parseFileSize(resume.fileSize || resume.file_size || resume.size),
-      fileType: resume.fileType || resume.file_type || resume.type || resume.mimeType || 'application/octet-stream',
-      uploadDate: this.parseUploadDate(resume.uploadDate || resume.upload_date || resume.createdAt),
-      fileUrl: resume.fileUrl || resume.file_url || resume.url
-    };
-    
-    // If we have an ID but no file info, this might be a placeholder record
-    if (processedResume.id && !processedResume.fileName && processedResume.fileName !== 'Unknown File') {
-      console.warn('Resume record found but file information is missing. This might be a placeholder record.');
-    }
-    
-    console.log('Processed resume:', processedResume);
-    return processedResume;
-  }
 
-  private parseFileSize(size: any): number {
-    if (typeof size === 'number') return size;
-    if (typeof size === 'string') {
-      const parsed = parseInt(size, 10);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    // Handle Java Long type (might be serialized as string)
-    if (size && typeof size === 'object' && size.toString) {
-      const parsed = parseInt(size.toString(), 10);
-      return isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
-  }
-
-  private parseUploadDate(date: any): Date {
-    if (date instanceof Date) return date;
-    if (typeof date === 'string') {
-      const parsed = new Date(date);
-      return isNaN(parsed.getTime()) ? new Date() : parsed;
-    }
-    // Handle Java LocalDateTime object (might have specific properties)
-    if (date && typeof date === 'object') {
-      // If it's a Java LocalDateTime, it might have year, month, day, etc.
-      if (date.year && date.monthValue && date.dayOfMonth) {
-        return new Date(date.year, date.monthValue - 1, date.dayOfMonth, 
-                       date.hour || 0, date.minute || 0, date.second || 0);
-      }
-      // If it has a toString method, try parsing it
-      if (date.toString) {
-        const parsed = new Date(date.toString());
-        return isNaN(parsed.getTime()) ? new Date() : parsed;
-      }
-    }
-    return new Date();
-  }
 
   // Score utility methods
   getScoreColor(score: number): string {
