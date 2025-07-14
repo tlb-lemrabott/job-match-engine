@@ -166,6 +166,19 @@ export class ProfileComponent implements OnInit, OnDestroy {
           console.log('Resume type:', typeof resume);
           console.log('Resume keys:', Object.keys(resume));
           console.log('Resume JSON:', JSON.stringify(resume, null, 2));
+          console.log('Resume hasOwnProperty checks:');
+          console.log('- has fileName:', resume.hasOwnProperty('fileName'));
+          console.log('- has fileSize:', resume.hasOwnProperty('fileSize'));
+          console.log('- has fileType:', resume.hasOwnProperty('fileType'));
+          console.log('- has uploadDate:', resume.hasOwnProperty('uploadDate'));
+          console.log('Checking for alternative property names:');
+          console.log('- has file_name:', resume.hasOwnProperty('file_name'));
+          console.log('- has file_size:', resume.hasOwnProperty('file_size'));
+          console.log('- has file_type:', resume.hasOwnProperty('file_type'));
+          console.log('- has upload_date:', resume.hasOwnProperty('upload_date'));
+          console.log('- has name:', resume.hasOwnProperty('name'));
+          console.log('- has size:', resume.hasOwnProperty('size'));
+          console.log('- has type:', resume.hasOwnProperty('type'));
           
           // Debug each property
           console.log('fileName:', resume.fileName, 'type:', typeof resume.fileName);
@@ -278,15 +291,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
   private processResumeData(resume: any): Resume {
     console.log('Processing resume data:', resume);
     
-    // Backend entity properties match frontend interface
+    // Handle different possible property names from backend
     const processedResume: Resume = {
-      id: resume.id || '',
-      fileName: resume.fileName || '',
-      fileSize: this.parseFileSize(resume.fileSize),
-      fileType: resume.fileType || '',
-      uploadDate: this.parseUploadDate(resume.uploadDate),
-      fileUrl: resume.fileUrl
+      id: resume.id || resume._id || '',
+      fileName: resume.fileName || resume.file_name || resume.name || 'Unknown File',
+      fileSize: this.parseFileSize(resume.fileSize || resume.file_size || resume.size),
+      fileType: resume.fileType || resume.file_type || resume.type || resume.mimeType || 'application/octet-stream',
+      uploadDate: this.parseUploadDate(resume.uploadDate || resume.upload_date || resume.createdAt),
+      fileUrl: resume.fileUrl || resume.file_url || resume.url
     };
+    
+    // If we have an ID but no file info, this might be a placeholder record
+    if (processedResume.id && !processedResume.fileName && processedResume.fileName !== 'Unknown File') {
+      console.warn('Resume record found but file information is missing. This might be a placeholder record.');
+    }
     
     console.log('Processed resume:', processedResume);
     return processedResume;

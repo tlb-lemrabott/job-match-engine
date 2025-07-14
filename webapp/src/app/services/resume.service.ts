@@ -41,6 +41,12 @@ export class ResumeService {
     const formData = new FormData();
     formData.append('resume', file);
 
+    console.log('Uploading file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    });
+
     const httpOptions = {
       headers: new HttpHeaders({
         'Authorization': `Bearer ${this.getAuthToken()}`
@@ -51,6 +57,7 @@ export class ResumeService {
       .pipe(
         tap(response => {
           console.log('Raw API response from uploadResume:', response);
+          console.log('Upload response JSON:', JSON.stringify(response, null, 2));
         }),
         catchError(error => {
           console.error('Resume upload error:', error);
