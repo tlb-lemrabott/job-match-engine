@@ -62,6 +62,10 @@
             </div>
           </div>
           <div class="resume-actions">
+            <button class="btn btn-primary" (click)="updateResume()">
+              <i class="fas fa-edit"></i>
+              Update Resume
+            </button>
             <button class="btn btn-danger" (click)="deleteResume()">
               <i class="fas fa-trash"></i>
               Delete Resume
@@ -70,9 +74,9 @@
         </div>
       </div>
 
-      <!-- Upload New Resume -->
+      <!-- Upload/Update Resume -->
       <div class="upload-section">
-        <h3>Upload New Resume</h3>
+        <h3>{{ userResume ? 'Update Resume' : 'Upload New Resume' }}</h3>
         <div class="upload-area">
           <div class="file-input-container">
             <input 
@@ -80,7 +84,7 @@
               id="resumeFile" 
               accept=".pdf,.doc,.docx"
               (change)="onFileSelected($event)"
-              [disabled]="isUploading">
+              [disabled]="isUploading || isUpdating">
             <label for="resumeFile" class="file-input-label">
               <i class="fas fa-cloud-upload-alt"></i>
               <span *ngIf="!selectedFile">Choose a file or drag it here</span>
@@ -102,14 +106,14 @@
           <button 
             class="btn btn-primary upload-btn" 
             (click)="uploadResume()"
-            [disabled]="!selectedFile || isUploading">
-            <i class="fas fa-upload" *ngIf="!isUploading"></i>
-            <i class="fas fa-spinner fa-spin" *ngIf="isUploading"></i>
-            {{ isUploading ? 'Uploading...' : 'Upload Resume' }}
+            [disabled]="!selectedFile || isUploading || isUpdating">
+            <i class="fas fa-upload" *ngIf="!isUploading && !isUpdating"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="isUploading || isUpdating"></i>
+            {{ isUploading ? 'Uploading...' : isUpdating ? 'Updating...' : (userResume ? 'Update Resume' : 'Upload Resume') }}
           </button>
 
           <!-- Upload Progress -->
-          <div class="progress-container" *ngIf="isUploading">
+          <div class="progress-container" *ngIf="isUploading || isUpdating">
             <div class="progress-bar">
               <div class="progress-fill" [style.width.%]="uploadProgress"></div>
             </div>

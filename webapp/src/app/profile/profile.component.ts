@@ -21,6 +21,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
   userResume: Resume | null = null;
   selectedFile: File | null = null;
   isUploading = false;
+  isUpdating = false;
   uploadProgress = 0;
   uploadError = '';
 
@@ -79,7 +80,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
 
   uploadResume(): void {
     if (!this.selectedFile) {
-      this.uploadError = 'Please select a file to upload';
+      this.uploadError = this.userResume ? 'Please select a file to update' : 'Please select a file to upload';
+      return;
+    }
+
+    // If user has an existing resume, use update instead of upload
+    if (this.userResume) {
+      this.updateResume();
       return;
     }
 
@@ -107,11 +114,54 @@ export class ProfileComponent implements OnInit, OnDestroy {
             this.uploadProgress = 0;
             this.selectedFile = null;
             this.loadUserResume();
+            alert('Resume uploaded successfully!');
           }, 500);
         },
         error: (error) => {
           clearInterval(progressInterval);
           this.isUploading = false;
+          this.uploadProgress = 0;
+          this.uploadError = error.message;
+        }
+      });
+  }
+
+  updateResume(): void {
+    if (!this.selectedFile) {
+      this.uploadError = 'Please select a file to update';
+      return;
+    }
+
+    this.isUpdating = true;
+    this.uploadProgress = 0;
+    this.uploadError = '';
+
+    // Simulate update progress
+    const progressInterval = setInterval(() => {
+      this.uploadProgress += 10;
+      if (this.uploadProgress >= 90) {
+        clearInterval(progressInterval);
+      }
+    }, 200);
+
+    this.resumeService.updateResume(this.selectedFile)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          clearInterval(progressInterval);
+          this.uploadProgress = 100;
+          
+          setTimeout(() => {
+            this.isUpdating = false;
+            this.uploadProgress = 0;
+            this.selectedFile = null;
+            this.loadUserResume();
+            alert('Resume updated successfully!');
+          }, 500);
+        },
+        error: (error) => {
+          clearInterval(progressInterval);
+          this.isUpdating = false;
           this.uploadProgress = 0;
           this.uploadError = error.message;
         }

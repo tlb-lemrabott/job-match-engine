@@ -84,6 +84,39 @@ export class ResumeService {
       );
   }
 
+  updateResume(file: File): Observable<ResumeUploadResponse> {
+    const formData = new FormData();
+    formData.append('resume', file);
+
+    const httpOptions = {
+      headers: new HttpHeaders({
+        'Authorization': `Bearer ${this.getAuthToken()}`
+      })
+    };
+
+    return this.http.put<BackendResumeResponse>(`${this.apiUrl}/resume/update`, formData, httpOptions)
+      .pipe(
+        map(response => {
+          if (response.success && response.resume) {
+            return {
+              success: true,
+              message: response.message,
+              resume: this.mapBackendResumeToFrontend(response.resume)
+            };
+          } else {
+            return {
+              success: false,
+              message: response.message,
+              resume: undefined
+            };
+          }
+        }),
+        catchError(error => {
+          return throwError(() => new Error(error.error?.message || 'Resume update failed. Please try again.'));
+        })
+      );
+  }
+
   getUserResume(): Observable<Resume> {
     const httpOptions = {
       headers: new HttpHeaders({
