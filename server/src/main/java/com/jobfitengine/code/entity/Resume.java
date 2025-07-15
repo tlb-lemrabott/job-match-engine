@@ -44,7 +44,7 @@ public class Resume {
     private User user;
     
     @CreationTimestamp
-    @Column(name = "upload_date", nullable = false, updatable = false)
+    @Column(name = "upload_date", nullable = false)
     private LocalDateTime uploadDate;
     
     @UpdateTimestamp
