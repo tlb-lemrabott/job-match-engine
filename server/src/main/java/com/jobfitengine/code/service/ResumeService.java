@@ -4,6 +4,8 @@ import com.jobfitengine.code.dto.ResumeResponse;
 import com.jobfitengine.code.entity.Resume;
 import com.jobfitengine.code.entity.User;
 import com.jobfitengine.code.repository.ResumeRepository;
+import com.jobfitengine.code.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +27,8 @@ public class ResumeService {
     
     private final ResumeRepository resumeRepository;
     private final DocumentTextExtractionService textExtractionService;
+    private final UserRepository userRepository;
+    private final EntityManager entityManager;
     
     @Value("${file.upload.path}")
     private String uploadPath;
@@ -152,13 +156,22 @@ public class ResumeService {
         log.info("Found resume to delete - ID: {}, File: {}", resumeId, resume.getFileName());
         
         try {
-            // Delete file from filesystem
+            // Delete file from filesystem first
             Path filePath = Paths.get(resume.getFilePath());
             boolean fileDeleted = Files.deleteIfExists(filePath);
             log.info("File deletion result: {} for path: {}", fileDeleted, filePath);
             
-            // Delete from database using ID
-            resumeRepository.deleteById(resumeId);
+            // Refresh the user entity to ensure it's in the correct state
+            entityManager.refresh(user);
+            
+            // Clear the user's resume reference
+            user.setResume(null);
+            entityManager.merge(user);
+            
+            // Delete the resume entity
+            entityManager.remove(resume);
+            entityManager.flush();
+            
             log.info("Resume record deleted from database for user: {}", user.getEmail());
             
             return new ResumeResponse(true, "Resume deleted successfully", null);
