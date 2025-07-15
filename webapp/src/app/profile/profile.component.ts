@@ -323,4 +323,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (score >= 40) return 'Fair match. Focus on developing key missing skills.';
     return 'Poor match. Consider if this role aligns with your career goals.';
   }
+
+  triggerUpdateFileInput(fileInput: HTMLInputElement): void {
+    if (!this.isUploading && !this.isUpdating) {
+      fileInput.value = '';
+      fileInput.click();
+    }
+  }
+
+  onUpdateFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      const validation = this.fileUploadService.validateFile(file);
+      if (validation.isValid) {
+        this.selectedFile = file;
+        this.uploadError = '';
+        this.updateResume();
+      } else {
+        this.uploadError = validation.error || 'Invalid file';
+        this.selectedFile = null;
+      }
+    }
+  }
 }
