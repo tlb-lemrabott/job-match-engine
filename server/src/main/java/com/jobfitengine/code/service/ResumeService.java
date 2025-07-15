@@ -186,6 +186,7 @@ public class ResumeService {
             existingResume.setFileType(fileType);
             existingResume.setFilePath(newFilePath.toString());
             existingResume.setExtractedText(extractedText);
+            existingResume.setUploadDate(java.time.LocalDateTime.now());
             
             Resume updatedResume = resumeRepository.save(existingResume);
             
