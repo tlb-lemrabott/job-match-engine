@@ -117,4 +117,37 @@ public class ResumeController {
                     .body(new ResumeResponse(false, "Error deleting resume: " + e.getMessage(), null));
         }
     }
+    
+    @PutMapping("/update")
+    public ResponseEntity<ResumeResponse> updateResume(@RequestParam("resume") MultipartFile file,
+                                                      HttpServletRequest request) {
+        try {
+            UUID userId = (UUID) request.getAttribute("userId");
+            
+            if (userId == null) {
+                return ResponseEntity.badRequest()
+                        .body(new ResumeResponse(false, "Authentication failed: No user ID found", null));
+            }
+            
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            log.info("Resume update attempt for user: {}", user.getEmail());
+            
+            ResumeResponse response = resumeService.updateResume(file, user);
+            
+            if (response.isSuccess()) {
+                log.info("Resume updated successfully for user: {}", user.getEmail());
+                return ResponseEntity.ok(response);
+            } else {
+                log.warn("Resume update failed for user: {} - {}", user.getEmail(), response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            log.error("Error updating resume: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new ResumeResponse(false, "Error updating resume: " + e.getMessage(), null));
+        }
+    }
 } 

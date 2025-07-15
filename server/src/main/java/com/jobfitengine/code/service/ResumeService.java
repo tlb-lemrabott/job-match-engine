@@ -120,6 +120,96 @@ public class ResumeService {
         }
     }
     
+    public ResumeResponse updateResume(MultipartFile file, User user) {
+        try {
+            log.info("Starting resume update for user: {}", user.getEmail());
+            
+            // Check if user has an existing resume
+            Optional<Resume> existingResumeOpt = resumeRepository.findByUser(user);
+            if (existingResumeOpt.isEmpty()) {
+                log.warn("No existing resume found for user: {}", user.getEmail());
+                return new ResumeResponse(false, "No existing resume found. Please upload a resume first.", null);
+            }
+            
+            // Validate file
+            if (file.isEmpty()) {
+                log.warn("File is empty for user: {}", user.getEmail());
+                return new ResumeResponse(false, "File is empty", null);
+            }
+            
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isEmpty()) {
+                log.warn("Invalid filename for user: {}", user.getEmail());
+                return new ResumeResponse(false, "Invalid filename", null);
+            }
+            
+            // Check file type
+            String fileType = getFileExtension(originalFilename);
+            if (!isValidFileType(fileType)) {
+                log.warn("Invalid file type: {} for user: {}", fileType, user.getEmail());
+                return new ResumeResponse(false, "Invalid file type. Only PDF, DOC, DOCX are allowed", null);
+            }
+            
+            // Check file size (10MB limit)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                log.warn("File size exceeds limit: {} bytes for user: {}", file.getSize(), user.getEmail());
+                return new ResumeResponse(false, "File size exceeds 10MB limit", null);
+            }
+            
+            // Create upload directory if it doesn't exist
+            Path uploadDir = Paths.get(uploadPath);
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+            
+            // Generate unique filename for new file
+            String uniqueFilename = UUID.randomUUID().toString() + "." + fileType;
+            Path newFilePath = uploadDir.resolve(uniqueFilename);
+            
+            // Save new file
+            Files.copy(file.getInputStream(), newFilePath);
+            
+            // Extract text from new document
+            String extractedText = textExtractionService.extractText(file.getInputStream());
+            
+            // Get existing resume and delete old file
+            Resume existingResume = existingResumeOpt.get();
+            try {
+                Files.deleteIfExists(Paths.get(existingResume.getFilePath()));
+            } catch (IOException e) {
+                log.error("Error deleting old resume file: {}", e.getMessage());
+            }
+            
+            // Update resume record
+            existingResume.setFileName(originalFilename);
+            existingResume.setFileSize(file.getSize());
+            existingResume.setFileType(fileType);
+            existingResume.setFilePath(newFilePath.toString());
+            existingResume.setExtractedText(extractedText);
+            
+            Resume updatedResume = resumeRepository.save(existingResume);
+            
+            ResumeResponse.ResumeDto resumeDto = new ResumeResponse.ResumeDto(
+                    updatedResume.getId(),
+                    updatedResume.getFileName(),
+                    updatedResume.getFileSize(),
+                    updatedResume.getUploadDate(),
+                    updatedResume.getFileType(),
+                    null // fileUrl is null for local storage
+            );
+            
+            log.info("Resume update completed successfully for user: {}", user.getEmail());
+            return new ResumeResponse(true, "Resume updated successfully", resumeDto);
+            
+        } catch (IOException e) {
+            log.error("Error updating resume for user {}: {}", user.getEmail(), e.getMessage());
+            return new ResumeResponse(false, "Error updating resume: " + e.getMessage(), null);
+        } catch (Exception e) {
+            log.error("Unexpected error updating resume for user {}: {}", user.getEmail(), e.getMessage());
+            return new ResumeResponse(false, "Error updating resume: " + e.getMessage(), null);
+        }
+    }
+    
     public ResumeResponse getUserResume(User user) {
         Optional<Resume> resumeOpt = resumeRepository.findByUser(user);
         
