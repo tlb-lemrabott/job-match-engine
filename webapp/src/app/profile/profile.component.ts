@@ -130,8 +130,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
               this.userResume = null;
               // Show success message
               alert('Resume deleted successfully!');
-              // Reload resume data to ensure UI is in sync
-              this.loadUserResume();
+              // Don't reload resume data since we just deleted it
             } else {
               alert('Failed to delete resume: ' + response.message);
             }
@@ -139,15 +138,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error('Delete error:', error);
             
-            // Handle specific error cases
-            if (error.message.includes('inconsistent state')) {
-              // If resume is in inconsistent state, clear it from UI and suggest re-upload
+            // Check if it's a 404 (not found) error, which is expected after deletion
+            if (error.status === 404) {
               this.userResume = null;
-              alert('Resume record was corrupted. It has been cleared. Please upload a new resume.');
-            } else if (error.message.includes('not found')) {
-              // If resume not found, clear it from UI
-              this.userResume = null;
-              alert('Resume not found. It has been cleared from the interface.');
+              alert('Resume deleted successfully!');
             } else {
               // Show generic error message
               alert('Failed to delete resume: ' + error.message);
