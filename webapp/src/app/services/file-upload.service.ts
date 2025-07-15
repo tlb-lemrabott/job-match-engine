@@ -43,13 +43,17 @@ export class FileUploadService {
   }
 
   getFileTypeDisplayName(fileType: string): string {
+    if (!fileType) return 'Unknown';
+    const type = fileType.toLowerCase();
     const typeMap: { [key: string]: string } = {
       'application/pdf': 'PDF',
+      'pdf': 'PDF',
       'application/msword': 'DOC',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX'
+      'doc': 'DOC',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+      'docx': 'DOCX'
     };
-    
-    return typeMap[fileType] || 'Unknown';
+    return typeMap[type] || 'Unknown';
   }
 
   async fileToBase64(file: File): Promise<string> {
