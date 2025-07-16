@@ -54,7 +54,9 @@
                   </span>
                 </div>
                 <span class="hidden md:block text-sm font-medium text-gray-700">
-                  {{ currentUser?.name || 'User' }}
+                  <button routerLink="/profile" class="focus:outline-none hover:text-indigo-600 transition-colors duration-200">
+                    {{ currentUser?.name || 'User' }}
+                  </button>
                 </span>
               </div>
               
