@@ -51,6 +51,12 @@
                 <span class="file-size">{{ formatFileSize(userResume.fileSize) }}</span>
                 <span class="upload-date">Uploaded At: {{ userResume.uploadDate | date:'medium' }}</span>
               </p>
+              <!-- PDF View Link -->
+              <div *ngIf="userResume.fileName === 'Resume-Lemrabott_Toulba.pdf' && userResume.fileUrl" style="margin-top: 8px;">
+                <a [href]="userResume.fileUrl" target="_blank" rel="noopener" class="btn btn-outline-primary">
+                  <i class="fas fa-file-pdf"></i> View PDF
+                </a>
+              </div>
               <!-- Debug info -->
               <div style="font-size: 12px; color: #666; margin-top: 10px;">
                 <p>Debug Info:</p>
