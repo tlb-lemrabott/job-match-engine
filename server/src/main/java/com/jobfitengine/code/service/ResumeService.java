@@ -105,7 +105,7 @@ public class ResumeService {
                     savedResume.getFileSize(),
                     savedResume.getUploadDate(),
                     savedResume.getFileType(),
-                    null // fileUrl is null for local storage
+                    "/resume/download/" + savedResume.getId()
             );
             
             log.info("Resume upload completed successfully for user: {}", user.getEmail());
@@ -196,7 +196,7 @@ public class ResumeService {
                     updatedResume.getFileSize(),
                     updatedResume.getUploadDate(),
                     updatedResume.getFileType(),
-                    null // fileUrl is null for local storage
+                    "/resume/download/" + updatedResume.getId()
             );
             
             log.info("Resume update completed successfully for user: {}", user.getEmail());
@@ -225,7 +225,7 @@ public class ResumeService {
                 resume.getFileSize(),
                 resume.getUploadDate(),
                 resume.getFileType(),
-                null // fileUrl is null for local storage
+                "/resume/download/" + resume.getId()
         );
         
         return new ResumeResponse(true, "Resume retrieved successfully", resumeDto);
