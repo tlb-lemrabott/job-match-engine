@@ -150,4 +150,36 @@ public class ResumeController {
                     .body(new ResumeResponse(false, "Error updating resume: " + e.getMessage(), null));
         }
     }
+
+    @GetMapping("/download/{resumeId}")
+    public ResponseEntity<?> downloadResume(@PathVariable UUID resumeId, HttpServletRequest request) {
+        try {
+            UUID userId = (UUID) request.getAttribute("userId");
+            if (userId == null) {
+                return ResponseEntity.status(403).body("Authentication failed: No user ID found");
+            }
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            var resumeOpt = resumeService.findByIdAndUser(resumeId, user);
+            if (resumeOpt.isEmpty()) {
+                return ResponseEntity.status(404).body("Resume not found");
+            }
+            var resume = resumeOpt.get();
+            java.nio.file.Path filePath = java.nio.file.Paths.get(resume.getFilePath());
+            if (!java.nio.file.Files.exists(filePath)) {
+                return ResponseEntity.status(404).body("File not found");
+            }
+            org.springframework.core.io.Resource fileResource = new org.springframework.core.io.UrlResource(filePath.toUri());
+            String contentType = "application/octet-stream";
+            if (resume.getFileType().equalsIgnoreCase("pdf")) contentType = "application/pdf";
+            if (resume.getFileType().equalsIgnoreCase("doc")) contentType = "application/msword";
+            if (resume.getFileType().equalsIgnoreCase("docx")) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resume.getFileName() + "\"")
+                    .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, contentType)
+                    .body(fileResource);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error downloading resume: " + e.getMessage());
+        }
+    }
 } 
