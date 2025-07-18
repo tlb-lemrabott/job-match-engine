@@ -45,7 +45,12 @@
                  *ngIf="userResume.fileType !== 'application/pdf' && userResume.fileType !== 'pdf' && userResume.fileType !== 'application/msword' && userResume.fileType !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' && userResume.fileType !== 'doc' && userResume.fileType !== 'docx'"></i>
             </div>
             <div class="resume-details">
-              <h3>{{ userResume.fileName || 'No filename' }}</h3>
+              <h3>
+                <a *ngIf="userResume.fileUrl" [href]="userResume.fileUrl" target="_blank" rel="noopener" style="color: inherit; text-decoration: none; cursor: pointer;">
+                  {{ userResume.fileName || 'No filename' }}
+                </a>
+                <span *ngIf="!userResume.fileUrl">{{ userResume.fileName || 'No filename' }}</span>
+              </h3>
               <p class="resume-meta">
                 <span class="file-type">{{ getFileTypeDisplayName(userResume.fileType) }}</span>
                 <span class="file-size">{{ formatFileSize(userResume.fileSize) }}</span>
