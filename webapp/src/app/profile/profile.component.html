@@ -31,6 +31,9 @@
     <div class="resume-section">
       <h2>Resume Management</h2>
       
+      <!-- Debug: Show userResume object as JSON -->
+      <pre>{{ userResume | json }}</pre>
+      
       <!-- Current Resume Display -->
       <div class="current-resume" *ngIf="userResume">
         
