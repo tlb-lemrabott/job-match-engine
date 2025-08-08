@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1/job-matching")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200")
@@ -25,8 +25,8 @@ public class JobMatchingController {
     private final UserService userService;
     
     @PostMapping
-    public ResponseEntity<JobMatchingResponse> performJobMatching(@Valid @RequestBody JobMatchingRequest request,
-                                                                 HttpServletRequest httpRequest) {
+    public ResponseEntity<JobMatchingResponse> analyzeJobMatch(@Valid @RequestBody JobMatchingRequest request,
+                                                             HttpServletRequest httpRequest) {
         try {
             User user = userService.findById((java.util.UUID) httpRequest.getAttribute("userId"))
                     .orElseThrow(() -> new RuntimeException("User not found"));
