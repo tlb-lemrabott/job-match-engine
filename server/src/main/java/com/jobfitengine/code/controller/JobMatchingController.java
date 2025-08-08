@@ -4,6 +4,7 @@ import com.jobfitengine.code.dto.JobMatchingRequest;
 import com.jobfitengine.code.dto.JobMatchingResponse;
 import com.jobfitengine.code.entity.User;
 import com.jobfitengine.code.service.JobMatchingService;
+import com.jobfitengine.code.service.ResumeService;
 import com.jobfitengine.code.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ public class JobMatchingController {
     
     private final JobMatchingService jobMatchingService;
     private final UserService userService;
+    private final ResumeService resumeService;
     
     @PostMapping
     public ResponseEntity<JobMatchingResponse> analyzeJobMatch(@Valid @RequestBody JobMatchingRequest request,
@@ -31,7 +33,7 @@ public class JobMatchingController {
             User user = userService.findById((java.util.UUID) httpRequest.getAttribute("userId"))
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
-            log.info("Job matching analysis requested for user: {} with resume: {}", 
+            log.info("Job matching analysis requested for user: {} with resume ID: {}", 
                     user.getEmail(), request.getResume());
             
             // Validate request type
@@ -41,8 +43,21 @@ public class JobMatchingController {
                                 0.0, List.of(), List.of(), null));
             }
             
+            // Get user's resume text
+            var resumeOpt = resumeService.findByIdAndUser(request.getResume(), user);
+            if (resumeOpt.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new JobMatchingResponse(false, "Resume not found", 0.0, List.of(), List.of(), null));
+            }
+            
+            String resumeText = resumeOpt.get().getExtractedText();
+            if (resumeText == null || resumeText.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new JobMatchingResponse(false, "No text content found in resume", 0.0, List.of(), List.of(), null));
+            }
+            
             JobMatchingResponse response = jobMatchingService.performJobMatching(
-                    request.getResume(),
+                    resumeText,
                     user,
                     request.getTextArea(),
                     request.getType()
