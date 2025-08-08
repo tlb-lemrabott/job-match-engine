@@ -47,13 +47,13 @@ export interface BackendResumeResponse {
   providedIn: 'root'
 })
 export class ResumeService {
-  private apiUrl = 'http://localhost:8080';
+  private apiUrl = 'http://localhost:8080/api/v1';
 
   constructor(private http: HttpClient) { }
 
   uploadResume(file: File): Observable<ResumeUploadResponse> {
     const formData = new FormData();
-    formData.append('resume', file);
+    formData.append('file', file);
 
     const httpOptions = {
       headers: new HttpHeaders({
@@ -61,7 +61,7 @@ export class ResumeService {
       })
     };
 
-    return this.http.post<BackendResumeResponse>(`${this.apiUrl}/resume/upload`, formData, httpOptions)
+    return this.http.post<BackendResumeResponse>(`${this.apiUrl}/resumes`, formData, httpOptions)
       .pipe(
         map(response => {
           if (response.success && response.resume) {
@@ -86,7 +86,7 @@ export class ResumeService {
 
   updateResume(file: File): Observable<ResumeUploadResponse> {
     const formData = new FormData();
-    formData.append('resume', file);
+    formData.append('file', file);
 
     const httpOptions = {
       headers: new HttpHeaders({
@@ -94,7 +94,7 @@ export class ResumeService {
       })
     };
 
-    return this.http.put<BackendResumeResponse>(`${this.apiUrl}/resume/update`, formData, httpOptions)
+    return this.http.put<BackendResumeResponse>(`${this.apiUrl}/resumes/me`, formData, httpOptions)
       .pipe(
         map(response => {
           if (response.success && response.resume) {
@@ -124,7 +124,7 @@ export class ResumeService {
       })
     };
 
-    return this.http.get<BackendResumeResponse>(`${this.apiUrl}/resume/user`, httpOptions)
+    return this.http.get<BackendResumeResponse>(`${this.apiUrl}/resumes/me`, httpOptions)
       .pipe(
         map(response => {
           if (response.success && response.resume) {
@@ -146,7 +146,7 @@ export class ResumeService {
       })
     };
 
-    return this.http.delete<ResumeDeleteResponse>(`${this.apiUrl}/resume/user`, httpOptions)
+    return this.http.delete<ResumeDeleteResponse>(`${this.apiUrl}/resumes/me`, httpOptions)
       .pipe(
         tap(response => {
           console.log('Delete resume response:', response);
