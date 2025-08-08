@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: jobfitengine-postgres
+    environment:
+      POSTGRES_DB: jobfitengine-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root@root
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - jobfitengine-network
+
+  # Spring Boot Backend
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: jobfitengine-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/jobfitengine-db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root@root
+      PYTHON_MATCHER_URL: http://python-matcher:5000
+    depends_on:
+      - postgres
+      - python-matcher
+    volumes:
+      - ./server/uploads:/app/uploads
+    networks:
+      - jobfitengine-network
+
+  # Python Job Matcher Service
+  python-matcher:
+    build:
+      context: ./python-job-matcher
+      dockerfile: Dockerfile
+    container_name: jobfitengine-python-matcher
+    ports:
+      - "5000:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - jobfitengine-network
+
+  # Angular Frontend
+  frontend:
+    build:
+      context: ./webapp
+      dockerfile: Dockerfile
+    container_name: jobfitengine-frontend
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+    networks:
+      - jobfitengine-network
+
+volumes:
+  postgres_data:
+
+networks:
+  jobfitengine-network:
+    driver: bridge
