@@ -5,206 +5,118 @@ import com.jobfitengine.code.entity.Resume;
 import com.jobfitengine.code.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class JobMatchingService {
     
-    private final AwsComprehendService comprehendService;
-    private final BedrockEmbeddingService embeddingService;
     private final ResumeService resumeService;
+    private final WebClient webClient;
     
-    public JobMatchingResponse performJobMatching(UUID resumeId, User user, String jobDescription, String type) {
+    @Value("${python.matcher.url:http://localhost:5000}")
+    private String pythonMatcherUrl;
+    
+    public JobMatchingResponse performJobMatching(String resumeText, User user, String jobDescription, String type) {
         try {
-            // Get user's resume
-            Optional<Resume> resumeOpt = resumeService.findByIdAndUser(resumeId, user);
-            if (resumeOpt.isEmpty()) {
-                return new JobMatchingResponse(false, "Resume not found", 0.0, 
-                        List.of(), List.of(), null);
-            }
-            
-            Resume resume = resumeOpt.get();
-            String resumeText = resume.getExtractedText();
+            log.info("Starting job matching analysis for user: {}", user.getEmail());
             
             if (resumeText == null || resumeText.trim().isEmpty()) {
-                return new JobMatchingResponse(false, "No text content found in resume", 0.0, 
+                return new JobMatchingResponse(false, "No resume text provided", 0.0, 
                         List.of(), List.of(), null);
             }
             
-            // Extract skills from resume and job description
-            List<String> resumeSkills = comprehendService.extractSkills(resumeText);
-            List<String> jobSkills = comprehendService.extractSkills(jobDescription);
+            if (jobDescription == null || jobDescription.trim().isEmpty()) {
+                return new JobMatchingResponse(false, "No job description provided", 0.0, 
+                        List.of(), List.of(), null);
+            }
             
-            // Extract technical terms
-            List<String> resumeTechnicalTerms = comprehendService.extractTechnicalTerms(resumeText);
-            List<String> jobTechnicalTerms = comprehendService.extractTechnicalTerms(jobDescription);
+            // Call Python service for analysis
+            PythonMatchResponse pythonResponse = callPythonMatcher(resumeText, jobDescription);
             
-            // Combine all skills
-            Set<String> allResumeSkills = new HashSet<>();
-            allResumeSkills.addAll(resumeSkills);
-            allResumeSkills.addAll(resumeTechnicalTerms);
+            if (pythonResponse == null) {
+                return new JobMatchingResponse(false, "Failed to get analysis from Python service", 0.0, 
+                        List.of(), List.of(), null);
+            }
             
-            Set<String> allJobSkills = new HashSet<>();
-            allJobSkills.addAll(jobSkills);
-            allJobSkills.addAll(jobTechnicalTerms);
+            // Convert Python response to Java response format
+            JobMatchingResponse response = convertPythonResponse(pythonResponse);
             
-            // Calculate semantic similarity for overall matching
-            double semanticSimilarity = embeddingService.calculateSemanticSimilarity(resumeText, jobDescription);
+            log.info("Job matching analysis completed for user: {}. Score: {}", 
+                    user.getEmail(), response.getMatchingScore());
             
-            // Find matched skills
-            List<JobMatchingResponse.MatchedSkill> matchedSkills = findMatchedSkills(allResumeSkills, allJobSkills);
-            
-            // Find missing skills
-            List<JobMatchingResponse.MissingSkill> missingSkills = findMissingSkills(allResumeSkills, allJobSkills);
-            
-            // Calculate overall matching score
-            double matchingScore = calculateMatchingScore(matchedSkills, missingSkills, semanticSimilarity);
-            
-            // Generate analysis
-            JobMatchingResponse.Analysis analysis = generateAnalysis(matchingScore, matchedSkills, missingSkills);
-            
-            return new JobMatchingResponse(
-                    true,
-                    "Job matching analysis completed successfully",
-                    matchingScore,
-                    matchedSkills,
-                    missingSkills,
-                    analysis
-            );
+            return response;
             
         } catch (Exception e) {
-            log.error("Error performing job matching: {}", e.getMessage());
+            log.error("Error performing job matching for user {}: {}", user.getEmail(), e.getMessage());
             return new JobMatchingResponse(false, "Error performing job matching: " + e.getMessage(), 
                     0.0, List.of(), List.of(), null);
         }
     }
     
-    private List<JobMatchingResponse.MatchedSkill> findMatchedSkills(Set<String> resumeSkills, Set<String> jobSkills) {
-        return resumeSkills.stream()
-                .filter(resumeSkill -> jobSkills.stream()
-                        .anyMatch(jobSkill -> isSkillMatch(resumeSkill, jobSkill)))
-                .map(skill -> new JobMatchingResponse.MatchedSkill(skill, calculateConfidence(skill), "Technical"))
-                .collect(Collectors.toList());
+    private PythonMatchResponse callPythonMatcher(String resumeText, String jobDescription) {
+        try {
+            Map<String, String> request = Map.of(
+                "resume_text", resumeText,
+                "job_description", jobDescription
+            );
+            
+            return webClient.post()
+                .uri(pythonMatcherUrl + "/analyze")
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(PythonMatchResponse.class)
+                .block();
+                
+        } catch (Exception e) {
+            log.error("Error calling Python matcher service: {}", e.getMessage());
+            return null;
+        }
     }
     
-    private List<JobMatchingResponse.MissingSkill> findMissingSkills(Set<String> resumeSkills, Set<String> jobSkills) {
-        return jobSkills.stream()
-                .filter(jobSkill -> resumeSkills.stream()
-                        .noneMatch(resumeSkill -> isSkillMatch(resumeSkill, jobSkill)))
-                .map(skill -> new JobMatchingResponse.MissingSkill(skill, calculateImportance(skill), "Technical"))
-                .sorted((s1, s2) -> Double.compare(s2.getImportance(), s1.getImportance()))
-                .collect(Collectors.toList());
-    }
-    
-    private boolean isSkillMatch(String skill1, String skill2) {
-        String normalized1 = skill1.toLowerCase().trim();
-        String normalized2 = skill2.toLowerCase().trim();
+    private JobMatchingResponse convertPythonResponse(PythonMatchResponse pythonResponse) {
+        // Convert matched skills
+        List<JobMatchingResponse.MatchedSkill> matchedSkills = pythonResponse.getMatchedSkills().stream()
+                .map(skill -> new JobMatchingResponse.MatchedSkill(skill, 0.8, "Technical"))
+                .toList();
         
-        // Exact match
-        if (normalized1.equals(normalized2)) {
-            return true;
-        }
+        // Convert missing skills
+        List<JobMatchingResponse.MissingSkill> missingSkills = pythonResponse.getMissingSkills().stream()
+                .map(skill -> new JobMatchingResponse.MissingSkill(skill, 0.7, "Technical"))
+                .toList();
         
-        // Contains match
-        if (normalized1.contains(normalized2) || normalized2.contains(normalized1)) {
-            return true;
-        }
-        
-        // Handle common variations
-        Map<String, List<String>> skillVariations = Map.of(
-                "java", List.of("j2ee", "jee", "spring", "hibernate"),
-                "javascript", List.of("js", "es6", "node", "react", "angular", "vue"),
-                "python", List.of("django", "flask", "pandas", "numpy"),
-                "aws", List.of("amazon web services", "ec2", "s3", "lambda"),
-                "docker", List.of("containerization", "kubernetes", "k8s")
+        // Generate analysis based on score
+        JobMatchingResponse.Analysis analysis = generateAnalysis(
+                pythonResponse.getMatchScore(), 
+                matchedSkills, 
+                missingSkills,
+                pythonResponse.getMissingExperience()
         );
         
-        for (Map.Entry<String, List<String>> entry : skillVariations.entrySet()) {
-            if ((normalized1.equals(entry.getKey()) && entry.getValue().contains(normalized2)) ||
-                (normalized2.equals(entry.getKey()) && entry.getValue().contains(normalized1))) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    private double calculateConfidence(String skill) {
-        // Simple confidence calculation based on skill length and commonality
-        double baseConfidence = 0.7;
-        
-        // Increase confidence for longer, more specific skills
-        if (skill.length() > 10) {
-            baseConfidence += 0.1;
-        }
-        
-        // Increase confidence for common technical skills
-        String[] commonSkills = {"java", "python", "javascript", "aws", "docker", "kubernetes", "spring", "react"};
-        for (String commonSkill : commonSkills) {
-            if (skill.toLowerCase().contains(commonSkill)) {
-                baseConfidence += 0.1;
-                break;
-            }
-        }
-        
-        return Math.min(baseConfidence, 1.0);
-    }
-    
-    private double calculateImportance(String skill) {
-        // Simple importance calculation
-        double baseImportance = 0.6;
-        
-        // Increase importance for common technical skills
-        String[] importantSkills = {"java", "python", "javascript", "aws", "docker", "kubernetes", "spring", "react", "sql"};
-        for (String importantSkill : importantSkills) {
-            if (skill.toLowerCase().contains(importantSkill)) {
-                baseImportance += 0.2;
-                break;
-            }
-        }
-        
-        // Increase importance for longer, more specific skills
-        if (skill.length() > 8) {
-            baseImportance += 0.1;
-        }
-        
-        return Math.min(baseImportance, 1.0);
-    }
-    
-    private double calculateMatchingScore(List<JobMatchingResponse.MatchedSkill> matchedSkills, 
-                                        List<JobMatchingResponse.MissingSkill> missingSkills, 
-                                        double semanticSimilarity) {
-        if (matchedSkills.isEmpty() && missingSkills.isEmpty()) {
-            return semanticSimilarity * 100;
-        }
-        
-        double matchedScore = matchedSkills.stream()
-                .mapToDouble(skill -> skill.getConfidence())
-                .average()
-                .orElse(0.0);
-        
-        double missingPenalty = missingSkills.stream()
-                .mapToDouble(skill -> skill.getImportance())
-                .average()
-                .orElse(0.0);
-        
-        // Weighted combination of semantic similarity and skill matching
-        double skillScore = (matchedScore * 0.7) - (missingPenalty * 0.3);
-        double finalScore = (semanticSimilarity * 0.4) + (skillScore * 0.6);
-        
-        return Math.max(0.0, Math.min(100.0, finalScore * 100));
+        return new JobMatchingResponse(
+                true,
+                "Job matching analysis completed successfully",
+                pythonResponse.getMatchScore(),
+                matchedSkills,
+                missingSkills,
+                analysis
+        );
     }
     
     private JobMatchingResponse.Analysis generateAnalysis(double matchingScore, 
                                                          List<JobMatchingResponse.MatchedSkill> matchedSkills,
-                                                         List<JobMatchingResponse.MissingSkill> missingSkills) {
+                                                         List<JobMatchingResponse.MissingSkill> missingSkills,
+                                                         List<String> missingExperience) {
         String overallMatch;
-        List<String> recommendations = new ArrayList<>();
+        List<String> recommendations = new java.util.ArrayList<>();
         
         if (matchingScore >= 80) {
             overallMatch = "Excellent match! Your profile strongly aligns with the job requirements.";
@@ -224,14 +136,45 @@ public class JobMatchingService {
             recommendations.add("Consider entry-level positions or internships");
         }
         
+        // Add missing experience recommendations
+        if (!missingExperience.isEmpty()) {
+            recommendations.add("Experience gaps: " + String.join(", ", missingExperience));
+        }
+        
         if (!missingSkills.isEmpty()) {
             recommendations.add("Prioritize learning: " + 
                     missingSkills.stream()
                             .limit(3)
                             .map(JobMatchingResponse.MissingSkill::getSkill)
-                            .collect(Collectors.joining(", ")));
+                            .reduce((a, b) -> a + ", " + b)
+                            .orElse(""));
         }
         
         return new JobMatchingResponse.Analysis(overallMatch, recommendations);
+    }
+    
+    // Inner class to represent Python service response
+    public static class PythonMatchResponse {
+        private double matchScore;
+        private List<String> matchedSkills;
+        private List<String> missingSkills;
+        private List<String> missingExperience;
+        private List<String> otherMissing;
+        
+        // Getters and setters
+        public double getMatchScore() { return matchScore; }
+        public void setMatchScore(double matchScore) { this.matchScore = matchScore; }
+        
+        public List<String> getMatchedSkills() { return matchedSkills; }
+        public void setMatchedSkills(List<String> matchedSkills) { this.matchedSkills = matchedSkills; }
+        
+        public List<String> getMissingSkills() { return missingSkills; }
+        public void setMissingSkills(List<String> missingSkills) { this.missingSkills = missingSkills; }
+        
+        public List<String> getMissingExperience() { return missingExperience; }
+        public void setMissingExperience(List<String> missingExperience) { this.missingExperience = missingExperience; }
+        
+        public List<String> getOtherMissing() { return otherMissing; }
+        public void setOtherMissing(List<String> otherMissing) { this.otherMissing = otherMissing; }
     }
 } 
