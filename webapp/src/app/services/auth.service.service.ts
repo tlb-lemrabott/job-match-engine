@@ -40,7 +40,7 @@ export interface SignupResponse {
   providedIn: 'root'
 })
 export class AuthServiceService {
-  private apiUrl = 'http://localhost:8080';
+  private apiUrl = 'http://localhost:8080/api/v1';
   private isAuthenticatedSubject = new BehaviorSubject<boolean>(this.isAuthenticated());
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
@@ -84,7 +84,7 @@ export class AuthServiceService {
       })
     };
 
-    return this.http.post<SignupResponse>(`${this.apiUrl}/auth/signup`, signupData, httpOptions)
+    return this.http.post<SignupResponse>(`${this.apiUrl}/auth/register`, signupData, httpOptions)
       .pipe(
         map(response => {
           // Store user data if signup is successful
