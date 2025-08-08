@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/resume")
+@RequestMapping("/api/v1/resumes")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200")
@@ -23,8 +23,8 @@ public class ResumeController {
     private final ResumeService resumeService;
     private final UserService userService;
     
-    @PostMapping("/upload")
-    public ResponseEntity<ResumeResponse> uploadResume(@RequestParam("resume") MultipartFile file,
+    @PostMapping
+    public ResponseEntity<ResumeResponse> createResume(@RequestParam("file") MultipartFile file,
                                                       HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
@@ -56,8 +56,8 @@ public class ResumeController {
         }
     }
     
-    @GetMapping("/user")
-    public ResponseEntity<ResumeResponse> getUserResume(HttpServletRequest request) {
+    @GetMapping("/me")
+    public ResponseEntity<ResumeResponse> getMyResume(HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
             
@@ -86,8 +86,8 @@ public class ResumeController {
         }
     }
     
-    @DeleteMapping("/user")
-    public ResponseEntity<ResumeResponse> deleteUserResume(HttpServletRequest request) {
+    @DeleteMapping("/me")
+    public ResponseEntity<ResumeResponse> deleteMyResume(HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
             
@@ -118,9 +118,9 @@ public class ResumeController {
         }
     }
     
-    @PutMapping("/update")
-    public ResponseEntity<ResumeResponse> updateResume(@RequestParam("resume") MultipartFile file,
-                                                      HttpServletRequest request) {
+    @PutMapping("/me")
+    public ResponseEntity<ResumeResponse> updateMyResume(@RequestParam("file") MultipartFile file,
+                                                        HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
             
@@ -151,7 +151,7 @@ public class ResumeController {
         }
     }
 
-    @GetMapping("/download/{resumeId}")
+    @GetMapping("/{resumeId}/download")
     public ResponseEntity<?> downloadResume(@PathVariable UUID resumeId, HttpServletRequest request) {
         try {
             UUID userId = (UUID) request.getAttribute("userId");
