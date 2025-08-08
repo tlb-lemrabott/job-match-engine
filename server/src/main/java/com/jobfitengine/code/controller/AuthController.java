@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "http://localhost:4200")
@@ -34,9 +34,9 @@ public class AuthController {
         }
     }
     
-    @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(@Valid @RequestBody AuthRequest request) {
-        log.info("Signup attempt for user: {}", request.getEmail());
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody AuthRequest request) {
+        log.info("Registration attempt for user: {}", request.getEmail());
         
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             return ResponseEntity.badRequest()
@@ -51,10 +51,10 @@ public class AuthController {
         );
         
         if (response.isSuccess()) {
-            log.info("Signup successful for user: {}", request.getEmail());
+            log.info("Registration successful for user: {}", request.getEmail());
             return ResponseEntity.ok(response);
         } else {
-            log.warn("Signup failed for user: {}", request.getEmail());
+            log.warn("Registration failed for user: {}", request.getEmail());
             return ResponseEntity.badRequest().body(response);
         }
     }
