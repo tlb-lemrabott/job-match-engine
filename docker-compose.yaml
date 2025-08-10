@@ -44,7 +44,7 @@ services:
       dockerfile: Dockerfile
     container_name: jobfitengine-python-matcher
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - PYTHONUNBUFFERED=1
     networks:
