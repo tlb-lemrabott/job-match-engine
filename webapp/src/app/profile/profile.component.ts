@@ -239,10 +239,35 @@ export class ProfileComponent implements OnInit, OnDestroy {
       }
     }, 300);
 
-    const request: JobMatchingRequest = {
-      resume: this.userResume.id, // Assuming the resume ID is sent
+    // Validate resume ID
+    if (!this.userResume.id) {
+      this.matchingError = 'Resume ID is missing. Please try uploading your resume again.';
+      this.isMatching = false;
+      return;
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(this.userResume.id)) {
+      this.matchingError = 'Invalid resume ID format. Please try uploading your resume again.';
+      this.isMatching = false;
+      return;
+    }
+
+    console.log('Sending job matching request:', {
+      resumeId: this.userResume.id,
       type: this.jobMatchingForm.get('analysisType')?.value,
-      'text-area': this.jobMatchingForm.get('jobDescription')?.value
+      textArea: this.jobMatchingForm.get('jobDescription')?.value
+    });
+    
+    // Check authentication status
+    console.log('User authenticated:', this.authService.isAuthenticated());
+    console.log('Auth token present:', !!this.authService.getToken());
+
+    const request: JobMatchingRequest = {
+      resume: this.userResume.id,
+      type: this.jobMatchingForm.get('analysisType')?.value,
+      textArea: this.jobMatchingForm.get('jobDescription')?.value
     };
 
     this.jobMatchingService.checkJobMatch(request)
