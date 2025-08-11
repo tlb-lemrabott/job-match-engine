@@ -277,7 +277,15 @@ public class ResumeService {
     }
     
     public Optional<Resume> findByIdAndUser(UUID resumeId, User user) {
-        return resumeRepository.findByUserAndId(user, resumeId);
+        log.info("Looking up resume with ID: {} for user: {} (user ID: {})", resumeId, user.getEmail(), user.getId());
+        try {
+            Optional<Resume> result = resumeRepository.findByUserAndId(user, resumeId);
+            log.info("Resume lookup result: {}", result.isPresent() ? "Found" : "Not found");
+            return result;
+        } catch (Exception e) {
+            log.error("Error looking up resume: {}", e.getMessage(), e);
+            throw e;
+        }
     }
     
     private String getFileExtension(String filename) {
