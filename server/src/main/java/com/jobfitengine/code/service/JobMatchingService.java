@@ -69,27 +69,48 @@ public class JobMatchingService {
                 "job_description", jobDescription
             );
             
-            return webClient.post()
+            log.info("Calling Python matcher service at: {}", pythonMatcherUrl + "/analyze");
+            log.info("Request payload: resume_text length={}, job_description length={}", 
+                    resumeText.length(), jobDescription.length());
+            
+            PythonMatchResponse response = webClient.post()
                 .uri(pythonMatcherUrl + "/analyze")
                 .bodyValue(request)
                 .retrieve()
                 .bodyToMono(PythonMatchResponse.class)
+                .doOnNext(resp -> log.info("Python response object: matchScore={}, matchedSkills={}, missingSkills={}", 
+                        resp.getMatchScore(), 
+                        resp.getMatchedSkills() != null ? resp.getMatchedSkills().size() : "null", 
+                        resp.getMissingSkills() != null ? resp.getMissingSkills().size() : "null"))
                 .block();
                 
+            if (response != null) {
+                log.info("Python service response received. Match score: {}, Matched skills: {}, Missing skills: {}", 
+                        response.getMatchScore(), response.getMatchedSkills().size(), response.getMissingSkills().size());
+            } else {
+                log.warn("Python service returned null response");
+            }
+            
+            return response;
+                
         } catch (Exception e) {
-            log.error("Error calling Python matcher service: {}", e.getMessage());
+            log.error("Error calling Python matcher service: {}", e.getMessage(), e);
             return null;
         }
     }
     
     private JobMatchingResponse convertPythonResponse(PythonMatchResponse pythonResponse) {
-        // Convert matched skills
-        List<JobMatchingResponse.MatchedSkill> matchedSkills = pythonResponse.getMatchedSkills().stream()
+        // Convert matched skills with null safety
+        List<JobMatchingResponse.MatchedSkill> matchedSkills = 
+                (pythonResponse.getMatchedSkills() != null ? pythonResponse.getMatchedSkills() : List.<String>of())
+                .stream()
                 .map(skill -> new JobMatchingResponse.MatchedSkill(skill, 0.8, "Technical"))
                 .toList();
         
-        // Convert missing skills
-        List<JobMatchingResponse.MissingSkill> missingSkills = pythonResponse.getMissingSkills().stream()
+        // Convert missing skills with null safety
+        List<JobMatchingResponse.MissingSkill> missingSkills = 
+                (pythonResponse.getMissingSkills() != null ? pythonResponse.getMissingSkills() : List.<String>of())
+                .stream()
                 .map(skill -> new JobMatchingResponse.MissingSkill(skill, 0.7, "Technical"))
                 .toList();
         
@@ -98,7 +119,7 @@ public class JobMatchingService {
                 pythonResponse.getMatchScore(), 
                 matchedSkills, 
                 missingSkills,
-                pythonResponse.getMissingExperience()
+                pythonResponse.getMissingExperience() != null ? pythonResponse.getMissingExperience() : List.<String>of()
         );
         
         return new JobMatchingResponse(
