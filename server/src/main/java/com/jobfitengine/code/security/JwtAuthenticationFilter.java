@@ -28,6 +28,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserService userService;
     
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        String method = request.getMethod();
+        
+        // Log the request for debugging
+        log.debug("JWT Filter - Request: {} {}", method, path);
+        
+        // Exclude authentication endpoints and any other endpoints that should be public
+        boolean shouldExclude = path.startsWith("/api/v1/auth/") || 
+                               path.startsWith("/auth/") ||
+                               path.equals("/error") ||
+                               path.startsWith("/error/");
+        
+        if (shouldExclude) {
+            log.debug("JWT Filter - Excluding request: {} {}", method, path);
+        }
+        
+        return shouldExclude;
+    }
+    
+    @Override
     protected void doFilterInternal(HttpServletRequest request, 
                                   HttpServletResponse response, 
                                   FilterChain filterChain) throws ServletException, IOException {
