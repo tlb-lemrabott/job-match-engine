@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/job-matching")
@@ -30,11 +31,31 @@ public class JobMatchingController {
     public ResponseEntity<JobMatchingResponse> analyzeJobMatch(@Valid @RequestBody JobMatchingRequest request,
                                                              HttpServletRequest httpRequest) {
         try {
-            User user = userService.findById((java.util.UUID) httpRequest.getAttribute("userId"))
+            Object userIdAttr = httpRequest.getAttribute("userId");
+            log.info("Extracted user ID from request: {}", userIdAttr);
+            
+            if (userIdAttr == null) {
+                return ResponseEntity.badRequest()
+                        .body(new JobMatchingResponse(false, "Authentication failed: No user ID found", 
+                                0.0, List.of(), List.of(), null));
+            }
+            
+            User user = userService.findById((java.util.UUID) userIdAttr)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             
             log.info("Job matching analysis requested for user: {} with resume ID: {}", 
-                    user.getEmail(), request.getResume());
+                    user.getEmail(), request.getResumeId());
+            
+            // Debug logging
+            try {
+                UUID resumeUUID = request.getResumeUUID();
+                log.info("Converted resume UUID: {}", resumeUUID);
+            } catch (Exception e) {
+                log.error("Error converting resume ID to UUID: {}", e.getMessage());
+                return ResponseEntity.badRequest()
+                        .body(new JobMatchingResponse(false, "Invalid resume ID format: " + e.getMessage(), 
+                                0.0, List.of(), List.of(), null));
+            }
             
             // Validate request type
             if (!request.getType().equals("full-job") && !request.getType().equals("skills-section")) {
@@ -44,7 +65,9 @@ public class JobMatchingController {
             }
             
             // Get user's resume text
-            var resumeOpt = resumeService.findByIdAndUser(request.getResume(), user);
+            UUID resumeUUID = request.getResumeUUID();
+            log.info("Looking up resume with UUID: {} for user: {}", resumeUUID, user.getEmail());
+            var resumeOpt = resumeService.findByIdAndUser(resumeUUID, user);
             if (resumeOpt.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(new JobMatchingResponse(false, "Resume not found", 0.0, List.of(), List.of(), null));
@@ -71,6 +94,11 @@ public class JobMatchingController {
                 return ResponseEntity.badRequest().body(response);
             }
             
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid UUID format in job matching request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(new JobMatchingResponse(false, "Invalid resume ID format: " + e.getMessage(), 
+                            0.0, List.of(), List.of(), null));
         } catch (Exception e) {
             log.error("Error performing job matching: {}", e.getMessage());
             return ResponseEntity.badRequest()
